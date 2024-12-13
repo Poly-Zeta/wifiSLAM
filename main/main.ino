@@ -7,8 +7,8 @@
 #define SSD1306_CHARS_SIZE 16//1ページには16文字(128pix/8pix)
 #define SSD1306_CHARLINEDATA_SIZE 8//1文字は8line*1Byte
 
-#define FONTDATA_SIZE 52
-#define FONTDATA_OFFSET 0x2C
+#define FONTDATA_SIZE 59
+#define FONTDATA_OFFSET 0x20
 
 const uint8_t ADDRESS_SSD1306 =  0x3C;
 
@@ -24,6 +24,18 @@ uint8_t ssd1306_displayBuffer[SSD1306_PAGES_SIZE][SSD1306_CHARS_SIZE]={
 };
 
 const uint8_t fonts[FONTDATA_SIZE][SSD1306_CHARLINEDATA_SIZE]={
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},//   20
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// ! 21 nodata
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// " 22 nodata
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// # 23 nodata
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// $ 24 nodata
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// % 25 nodata
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// & 26 nodata
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// ' 27 nodata
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// ( 28 nodata
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// ) 29 nodata
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// * 2A nodata
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// + 2B nodata
   {0x00,0x00,0x00,0x00,0x60,0xE0,0x00,0x00},// , 2C 
   {0x00,0x00,0x10,0x10,0x10,0x10,0x10,0x00},// - 2D
   {0x00,0x00,0x00,0x00,0x00,0xC0,0xC0,0x00},// . 2E 
@@ -70,90 +82,94 @@ const uint8_t fonts[FONTDATA_SIZE][SSD1306_CHARLINEDATA_SIZE]={
   {0x00,0x1E,0x60,0xF8,0x1E,0xF8,0x60,0x1E},// W 57
   {0x00,0xC6,0xC6,0x28,0x10,0x28,0xC6,0xC6},// X 58
   {0x00,0x06,0x0C,0x18,0xF0,0x18,0x0C,0x06},// Y 59
-  {0x00,0xC6,0xC6,0xE6,0xD6,0xCE,0xC6,0xC6},// Z 5A
-  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// [ 5B nodata
-  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// \ 5C nodata
-  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// ] 5D nodata
-  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// ^ 5E nodata
-  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},// _ 5F nodata
-  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},//   60
+  {0x00,0xC6,0xC6,0xE6,0xD6,0xCE,0xC6,0xC6}// Z 5A
 };
 
-void setup() {
-  Wire.begin();
-  Serial.begin(115200);
-  Serial.print("setup start");
-  Serial.println();
-
-  Serial.print("SSD1306 setup");
-  Serial.println();
-    SSD1306_Init(); //OLED ssd1306 初期化
-    
-    Serial.print("SSD1306 cleanup");
-    Serial.println();
-      SSD1306_ClearAll();
-      SSD1306_FullFillSample();
-    SSD1306_ClearAll();
-
-  Serial.print("SSD1306 set end");
-  Serial.println();
-
-  //セットアップ表示とスクロールループをここに仕込む
-  
-  //ここまで．
-
-  Serial.print("setup end");
-  Serial.println();
-}
-
-void loop() {
-  unsigned long millis_buf = millis();//1ループの開始時間はとっておく
-
-
-
-
-  // Serial.print((millis()-millis_buf));//1ループの具体的処理の末尾時間はここで出す
-  // Serial.print("ms");
-  // Serial.println();
-
-  //1ループはdefine MAINLOOP_CYCLE_MSの時間で出しておく
-  //現在時刻-ループ頭がMAINLOOP_CYCLE_MSを超えるまで待機
-  while ((millis() - millis_buf) < MAINLOOP_CYCLE_MS){}
-  Serial.print((millis()-millis_buf));//1ループ全体の時間チェック用
-  Serial.print("ms");
-  Serial.println();
-}
-
-//OLED SSD1306 1ページぶんの表示を更新する関数
+//OLED SSD1306 1ページぶんの表示を更新する関数(処理速度が必要な場面では使用しない)
 //Page0から順に書いていって，7まで埋まっているときは全内容をシフトアップしてから7を更新する
-//取りうるサイズが決まっているので引数の配列長は固定
-void SSD1306_display1LineWithShiftUp(char input[SSD1306_CHARS_NUM]){
+//取りうるサイズが決まっているので引数の配列長は固定，呼び出し側で配列クリアしておく
+void SSD1306_display1LineWithShiftUp(char input[SSD1306_CHARS_SIZE]){
   static uint8_t updatePage=0;//0,1,...7と更新していく．8になったら以降はずっとシフトアップ+7を更新
+  // Serial.println(input);
 
   if(updatePage>=SSD1306_PAGES_SIZE){//全ページ更新済なので，バッファシフトアップして7ページ目更新
 
     //0~6pageのバッファのシフトアップ
     for(uint8_t pages=0;pages<SSD1306_PAGES_SIZE-1;pages++){
-      for(uint8_t chars=0;chars<SSD1306_CHARLINEDATA_SIZE;chars++){
+      for(uint8_t chars=0;chars<SSD1306_CHARS_SIZE;chars++){
         ssd1306_displayBuffer[pages][chars]=ssd1306_displayBuffer[pages+1][chars];
       }
     }
 
     //Page7のバッファを更新
-    for(uint8_t chars=0;chars<SSD1306_CHARLINEDATA_SIZE;chars++){
+    for(uint8_t chars=0;chars<SSD1306_CHARS_SIZE;chars++){
       ssd1306_displayBuffer[SSD1306_PAGES_SIZE-1][chars]=(uint8_t)input[chars];
     }
 
     //書き込み
+    for(uint8_t page=0;page<SSD1306_PAGES_SIZE;page++){//全ページを対象
 
+      Wire.beginTransmission(ADDRESS_SSD1306);
+
+      //ページ指定
+      Wire.write(0b10000000); //control byte, Co bit = 1 (1byte only), D/C# = 0 (command)
+        Wire.write(0xB0 | page); //set page start address(B0～B7)
+
+      //表示更新幅指定っぽい
+      Wire.write(0b00000000);
+        Wire.write(0x21); //set Column Address
+          Wire.write(0); //Column Start Address(0-127)
+          Wire.write(127); //Column Stop Address(0-127)
+
+      Wire.endTransmission();
+
+      for(uint8_t chara=0;chara<SSD1306_CHARS_SIZE;chara++){//ページ内全文字を対象
+        Wire.beginTransmission(ADDRESS_SSD1306);
+        Wire.write(0b01000000); //control byte, Co bit = 0 (continue), D/C# = 1 (data) Max=31byte
+
+        for(uint8_t cntByteLine=0;cntByteLine<SSD1306_CHARLINEDATA_SIZE;cntByteLine++){
+          Wire.write(
+            fonts[ssd1306_displayBuffer[page][chara]-FONTDATA_OFFSET][cntByteLine]
+          );
+        }
+        Wire.endTransmission();
+
+      }
+    }
   }else{//updatePageを更新
 
     //updatePageのバッファを更新
-    for(uint8_t chars=0;chars<SSD1306_CHARLINEDATA_SIZE;chars++){
+    for(uint8_t chars=0;chars<SSD1306_CHARS_SIZE;chars++){
       ssd1306_displayBuffer[updatePage][chars]=(uint8_t)input[chars];
     }
 
     //書き込み
+    Wire.beginTransmission(ADDRESS_SSD1306);
+
+    //ページ指定
+    Wire.write(0b10000000); //control byte, Co bit = 1 (1byte only), D/C# = 0 (command)
+      Wire.write(0xB0 | updatePage); //set page start address(B0～B7)
+
+    //表示更新幅指定っぽい
+    Wire.write(0b00000000);
+      Wire.write(0x21); //set Column Address
+        Wire.write(0); //Column Start Address(0-127)
+        Wire.write(127); //Column Stop Address(0-127)
+
+    Wire.endTransmission();
+
+    for(uint8_t chara=0;chara<SSD1306_CHARS_SIZE;chara++){//ページ内全文字を対象
+      Wire.beginTransmission(ADDRESS_SSD1306);
+      Wire.write(0b01000000); //control byte, Co bit = 0 (continue), D/C# = 1 (data) Max=31byte
+
+      for(uint8_t cntByteLine=0;cntByteLine<SSD1306_CHARLINEDATA_SIZE;cntByteLine++){
+        Wire.write(
+          fonts[ssd1306_displayBuffer[updatePage][chara]-FONTDATA_OFFSET][cntByteLine]
+        );
+      }
+      Wire.endTransmission();
+
+    }
 
     //Page番号更新
     updatePage++;
@@ -191,13 +207,6 @@ void SSD1306_FullFillSample(){
         Wire.write(fonts[fontCount][cntByteLine]);
       }
       Wire.endTransmission();
-
-      Serial.print(page);
-      Serial.print(",");
-      Serial.print(chara);
-      Serial.print(",");
-      Serial.print(fontCount);
-      Serial.println();
 
       //どの文字を表示するか決定．配列の添え字．
       fontCount++;
@@ -312,3 +321,63 @@ void SSD1306_ClearAll(){
 
 
 
+void setup() {
+  Wire.begin();
+  Serial.begin(115200);
+  Serial.print("setup start");
+  Serial.println();
+
+  Serial.print("SSD1306 setup");
+  Serial.println();
+    SSD1306_Init(); //OLED ssd1306 初期化
+    
+    Serial.print("SSD1306 cleanup");
+    Serial.println();
+      SSD1306_ClearAll();
+      SSD1306_FullFillSample();
+    SSD1306_ClearAll();
+
+  Serial.print("SSD1306 set end");
+  Serial.println();
+
+  SSD1306_display1LineWithShiftUp("LINE1 TEST      ");
+  delay(1000);
+  SSD1306_display1LineWithShiftUp(" LINE2 TEST     ");
+  delay(1000);
+  SSD1306_display1LineWithShiftUp("  LINE3 TEST    ");
+  delay(1000);
+  SSD1306_display1LineWithShiftUp("   LINE4 TEST   ");
+  delay(1000);
+  SSD1306_display1LineWithShiftUp("    LINE5 TEST  ");
+  delay(1000);
+  SSD1306_display1LineWithShiftUp("     LINE6 TEST ");
+  delay(1000);
+  SSD1306_display1LineWithShiftUp("      LINE7 TEST");
+  delay(1000);
+  SSD1306_display1LineWithShiftUp("LINE8 TEST      ");
+  delay(1000);
+  SSD1306_display1LineWithShiftUp(" LINE9 TEST     ");
+  delay(1000);
+  SSD1306_display1LineWithShiftUp("  LINE10 TEST   ");
+
+  Serial.print("setup end");
+  Serial.println();
+}
+
+void loop() {
+  unsigned long millis_buf = millis();//1ループの開始時間はとっておく
+
+
+
+
+  // Serial.print((millis()-millis_buf));//1ループの具体的処理の末尾時間はここで出す
+  // Serial.print("ms");
+  // Serial.println();
+
+  //1ループはdefine MAINLOOP_CYCLE_MSの時間で出しておく
+  //現在時刻-ループ頭がMAINLOOP_CYCLE_MSを超えるまで待機
+  while ((millis() - millis_buf) < MAINLOOP_CYCLE_MS){}
+  // Serial.print((millis()-millis_buf));//1ループ全体の時間チェック用
+  // Serial.print("ms");
+  // Serial.println();
+}
