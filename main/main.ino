@@ -87,8 +87,7 @@ const uint8_t fonts[FONTDATA_SIZE][SSD1306_CHARLINEDATA_SIZE]={
 
 //OLED SSD1306 1ページぶんの表示を更新する関数(処理速度が必要な場面では使用しない)
 //Page0から順に書いていって，7まで埋まっているときは全内容をシフトアップしてから7を更新する
-//取りうるサイズが決まっているので引数の配列長は固定，呼び出し側で配列クリアしておく
-void SSD1306_display1LineWithShiftUp(char input[SSD1306_CHARS_SIZE]){
+void SSD1306_display1LineWithShiftUp(char* input){
   static uint8_t updatePage=0;//0,1,...7と更新していく．8になったら以降はずっとシフトアップ+7を更新
   // Serial.println(input);
 
@@ -103,7 +102,14 @@ void SSD1306_display1LineWithShiftUp(char input[SSD1306_CHARS_SIZE]){
 
     //Page7のバッファを更新
     for(uint8_t chars=0;chars<SSD1306_CHARS_SIZE;chars++){
-      ssd1306_displayBuffer[SSD1306_PAGES_SIZE-1][chars]=(uint8_t)input[chars];
+      if(input[chars]=='\0'){
+        for(uint8_t tmp=chars;tmp<SSD1306_CHARS_SIZE;tmp++){
+          ssd1306_displayBuffer[SSD1306_PAGES_SIZE-1][tmp]=(uint8_t)(0x20);//SP
+        }
+        break;
+      }else{
+        ssd1306_displayBuffer[SSD1306_PAGES_SIZE-1][chars]=(uint8_t)input[chars];
+      }
     }
 
     //書き込み
@@ -140,7 +146,14 @@ void SSD1306_display1LineWithShiftUp(char input[SSD1306_CHARS_SIZE]){
 
     //updatePageのバッファを更新
     for(uint8_t chars=0;chars<SSD1306_CHARS_SIZE;chars++){
-      ssd1306_displayBuffer[updatePage][chars]=(uint8_t)input[chars];
+      if(input[chars]=='\0'){
+        for(uint8_t tmp=chars;tmp<SSD1306_CHARS_SIZE;tmp++){
+          ssd1306_displayBuffer[updatePage][tmp]=(uint8_t)(0x20);//SP
+        }
+        break;
+      }else{
+        ssd1306_displayBuffer[updatePage][chars]=(uint8_t)input[chars];
+      }
     }
 
     //書き込み
@@ -340,25 +353,25 @@ void setup() {
   Serial.print("SSD1306 set end");
   Serial.println();
 
-  SSD1306_display1LineWithShiftUp("LINE1 TEST      ");
+  SSD1306_display1LineWithShiftUp("LINE1 TEST");
   delay(1000);
-  SSD1306_display1LineWithShiftUp(" LINE2 TEST     ");
+  SSD1306_display1LineWithShiftUp(" LINE2 TEST");
   delay(1000);
-  SSD1306_display1LineWithShiftUp("  LINE3 TEST    ");
+  SSD1306_display1LineWithShiftUp("  LINE3 TEST");
   delay(1000);
-  SSD1306_display1LineWithShiftUp("   LINE4 TEST   ");
+  SSD1306_display1LineWithShiftUp("   LINE4 TEST");
   delay(1000);
-  SSD1306_display1LineWithShiftUp("    LINE5 TEST  ");
+  SSD1306_display1LineWithShiftUp("    LINE5 TEST");
   delay(1000);
-  SSD1306_display1LineWithShiftUp("     LINE6 TEST ");
+  SSD1306_display1LineWithShiftUp("     LINE6 TEST");
   delay(1000);
   SSD1306_display1LineWithShiftUp("      LINE7 TEST");
   delay(1000);
-  SSD1306_display1LineWithShiftUp("LINE8 TEST      ");
+  SSD1306_display1LineWithShiftUp("LINE8 TEST");
   delay(1000);
-  SSD1306_display1LineWithShiftUp(" LINE9 TEST     ");
+  SSD1306_display1LineWithShiftUp(" LINE9 TEST");
   delay(1000);
-  SSD1306_display1LineWithShiftUp("  LINE10 TEST   ");
+  SSD1306_display1LineWithShiftUp("  LINE10 TEST");
 
   Serial.print("setup end");
   Serial.println();
