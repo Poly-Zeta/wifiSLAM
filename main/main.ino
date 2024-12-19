@@ -10,7 +10,13 @@
 #define FONTDATA_SIZE 59
 #define FONTDATA_OFFSET 0x20
 
+#define SENSORS 11
+
 const uint8_t ADDRESS_SSD1306 =  0x3C;
+const uint8_t ADDRESS_BNO055  =  0x28;
+
+//qx,qy,qz,qw,humit,temp,press,l-odom,r-odom,a-in1,a-in2
+float system_sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0};
 
 uint8_t ssd1306_displayBuffer[SSD1306_PAGES_SIZE][SSD1306_CHARS_SIZE]={
   {0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60},
@@ -84,6 +90,11 @@ const uint8_t fonts[FONTDATA_SIZE][SSD1306_CHARLINEDATA_SIZE]={
   {0x00,0x06,0x0C,0x18,0xF0,0x18,0x0C,0x06},// Y 59
   {0x00,0xC6,0xC6,0xE6,0xD6,0xCE,0xC6,0xC6}// Z 5A
 };
+
+void SSD1306_displaySensorsData(){
+
+  return;
+}
 
 //OLED SSD1306 1ページぶんの表示を更新する関数(処理速度が必要な場面では使用しない)
 //Page0から順に書いていって，7まで埋まっているときは全内容をシフトアップしてから7を更新する
@@ -337,44 +348,81 @@ void SSD1306_ClearAll(){
 void setup() {
   Wire.begin();
   Serial.begin(115200);
-  Serial.print("setup start");
-  Serial.println();
+  // Serial.print("setup start");
+  // Serial.println();
 
-  Serial.print("SSD1306 setup");
-  Serial.println();
-    SSD1306_Init(); //OLED ssd1306 初期化
-    
-    Serial.print("SSD1306 cleanup");
-    Serial.println();
-      SSD1306_ClearAll();
-      SSD1306_FullFillSample();
-    SSD1306_ClearAll();
+  // Serial.print("SSD1306 setup");
+  // Serial.println();
+  SSD1306_Init(); //OLED ssd1306 初期化
+  
+  // Serial.print("SSD1306 cleanup");
+  // Serial.println();
+  SSD1306_ClearAll();
+  delay(300);
+  SSD1306_FullFillSample();
+  delay(300);
+  SSD1306_ClearAll();
+  delay(300);
 
-  Serial.print("SSD1306 set end");
-  Serial.println();
+  // Serial.print("SSD1306 set end");
+  // Serial.println();
+  SSD1306_display1LineWithShiftUp("INIT START");
+  delay(300);
+  SSD1306_display1LineWithShiftUp("SSD1306 SETUP");
+  delay(100);
+  SSD1306_display1LineWithShiftUp("SSD1306 STANDBY");
 
-  SSD1306_display1LineWithShiftUp("LINE1 TEST");
-  delay(1000);
-  SSD1306_display1LineWithShiftUp(" LINE2 TEST");
-  delay(1000);
-  SSD1306_display1LineWithShiftUp("  LINE3 TEST");
-  delay(1000);
-  SSD1306_display1LineWithShiftUp("   LINE4 TEST");
-  delay(1000);
-  SSD1306_display1LineWithShiftUp("    LINE5 TEST");
-  delay(1000);
-  SSD1306_display1LineWithShiftUp("     LINE6 TEST");
-  delay(1000);
-  SSD1306_display1LineWithShiftUp("      LINE7 TEST");
-  delay(1000);
-  SSD1306_display1LineWithShiftUp("LINE8 TEST");
-  delay(1000);
-  SSD1306_display1LineWithShiftUp(" LINE9 TEST");
-  delay(1000);
-  SSD1306_display1LineWithShiftUp("  LINE10 TEST");
+  SSD1306_display1LineWithShiftUp("BNO055 SETUP");
+  delay(300);
 
-  Serial.print("setup end");
-  Serial.println();
+//NDOF(全センサ有効，自動キャリブレーション，自動フュージョンモード)
+//[OPR_MODE]: xxxx1100b
+
+//電源モードノーマル
+//[PWR_MODE]: xxxxxx00b
+
+//Acc: m/s2
+//[UNIT_SEL] : xxxxxxx0b
+
+//Deg/s
+//[UNIT_SEL] : xxxxxx0xb
+
+//オイラー角 deg
+//[UNIT_SEL] : xxxxx0xxb
+
+//読み出しは
+//加速度3軸2Byte(シリアルのみ)
+//磁気3軸2Byte(シリアルのみ)
+//角速度3軸2Byte(シリアルのみ)
+//線形加速度？3軸2Byte(シリアルのみ)
+//四元数4要素2Byte(モニタ，シリアル)
+
+
+  // SSD1306_display1LineWithShiftUp("BNO055 STANDBY");
+  SSD1306_display1LineWithShiftUp("BNO055 SKIP");
+
+
+  SSD1306_display1LineWithShiftUp("BME280 SETUP");
+  delay(300);
+  // SSD1306_display1LineWithShiftUp("BME280 STANDBY");
+  SSD1306_display1LineWithShiftUp("BME280 SKIP");
+  delay(300);
+
+  // Serial.print("setup end");
+  // Serial.println();
+  SSD1306_display1LineWithShiftUp("SETUP COMPLETE");
+  delay(1000);
+  SSD1306_display1LineWithShiftUp("READY");
+  delay(1000);
+  
+  SSD1306_display1LineWithShiftUp("QW 0.00 QX 0.00");
+  SSD1306_display1LineWithShiftUp("QY 0.00 QZ 0.00");
+  SSD1306_display1LineWithShiftUp("HU100.0 TE 00.0");
+  SSD1306_display1LineWithShiftUp("PRESS 1000.00");
+  SSD1306_display1LineWithShiftUp("L-WHEEL 00000");
+  SSD1306_display1LineWithShiftUp("R-WHEEL 00000");
+  SSD1306_display1LineWithShiftUp("---------------");
+  SSD1306_display1LineWithShiftUp("---------------");
 }
 
 void loop() {
