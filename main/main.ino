@@ -13,6 +13,8 @@
 #define SENSORS 23
 #define SENSORS_DISPLAY_OFFSET 12
 
+bool isComnI2C=false;
+
 const uint8_t ADDRESS_SSD1306 =  0x3C;
 const uint8_t ADDRESS_BNO055  =  0x28;
 const uint8_t ADDRESS_BME280  =  0x76;
@@ -32,8 +34,6 @@ const uint8_t ADDRESS_ADS1115  =  0x28;
 double sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 uint16_t I2CActiveFlags=0b0000000000000000;
-
-const uint8_t sensorsAddress
 
 enum SensorsBufferNUM{
   GYRO_X,
@@ -69,7 +69,7 @@ enum I2CSensorsNUM{
   LED_BlinkM,
   SERVO_PCA9685,
   ADC_ADS1115
-}
+};
 
 //ディスプレイ描画バッファ
 uint8_t ssd1306_displayBuffer[SSD1306_PAGES_SIZE][SSD1306_CHARS_SIZE]={
@@ -146,6 +146,27 @@ const uint8_t fonts[FONTDATA_SIZE][SSD1306_CHARLINEDATA_SIZE]={
   {0x00,0xC6,0xC6,0xE6,0xD6,0xCE,0xC6,0xC6}// Z 5A
 };
 
+void BlinkM_setColor(uint8_t red,uint8_t green,uint8_t blue){
+  Wire.beginTransmission(ADDRESS_BlinkM);// join I2C, talk to BlinkM 0x09  
+  Wire.write('');
+  Wire.write(red); // value for red channel  
+  Wire.write(blue); // value for blue channel  
+  Wire.write(green); // value for green channel  
+  Wire.endTransmission(); // leave I2C bus
+}
+
+void beginI2CTransmission(uint8_t address){
+  BlinkM_setColor(0xff,0xff,0x00);
+  beginI2CTransmission(address);
+  return;
+}
+
+void endI2CTransmission(){
+  Wire.endTransmission();
+  BlinkM_setColor(0x00,0x00,0x00);
+  return;
+}
+
 //センサデータの描画　毎回全更新してると遅いのでメイン1ループあたり1要素
 void SSD1306_displaySensorsData(){
   static uint8_t cnt=SENSORS_DISPLAY_OFFSET;
@@ -198,7 +219,7 @@ void SSD1306_displaySensorsData(){
   }
 
   //書き込み
-  Wire.beginTransmission(ADDRESS_SSD1306);
+  beginI2CTransmission(ADDRESS_SSD1306);
 
   //ページ指定
   Wire.write(0b10000000); //control byte, Co bit = 1 (1byte only), D/C# = 0 (command)
@@ -210,10 +231,10 @@ void SSD1306_displaySensorsData(){
       Wire.write(8*updateChar); //Column Start Address(0-127)
       Wire.write(8*(updateChar+updateSize)); //Column Stop Address(0-127)
 
-  Wire.endTransmission();
+  endI2CTransmission();
 
   for(uint8_t chars=updateChar;chars<updateChar+updateSize;chars++){//ページ内全文字を対象
-    Wire.beginTransmission(ADDRESS_SSD1306);
+    beginI2CTransmission(ADDRESS_SSD1306);
     Wire.write(0b01000000); //control byte, Co bit = 0 (continue), D/C# = 1 (data) Max=31byte
 
     for(uint8_t cntByteLine=0;cntByteLine<SSD1306_CHARLINEDATA_SIZE;cntByteLine++){
@@ -221,7 +242,7 @@ void SSD1306_displaySensorsData(){
         fonts[ssd1306_displayBuffer[updatePage][chars]-FONTDATA_OFFSET][cntByteLine]
       );
     }
-    Wire.endTransmission();
+    endI2CTransmission();
 
   }
 
@@ -265,7 +286,7 @@ void SSD1306_display1LineWithShiftUp(char* input){
     //書き込み
     for(uint8_t page=0;page<SSD1306_PAGES_SIZE;page++){//全ページを対象
 
-      Wire.beginTransmission(ADDRESS_SSD1306);
+      beginI2CTransmission(ADDRESS_SSD1306);
 
       //ページ指定
       Wire.write(0b10000000); //control byte, Co bit = 1 (1byte only), D/C# = 0 (command)
@@ -277,10 +298,10 @@ void SSD1306_display1LineWithShiftUp(char* input){
           Wire.write(0); //Column Start Address(0-127)
           Wire.write(127); //Column Stop Address(0-127)
 
-      Wire.endTransmission();
+      endI2CTransmission();
 
       for(uint8_t chara=0;chara<SSD1306_CHARS_SIZE;chara++){//ページ内全文字を対象
-        Wire.beginTransmission(ADDRESS_SSD1306);
+        beginI2CTransmission(ADDRESS_SSD1306);
         Wire.write(0b01000000); //control byte, Co bit = 0 (continue), D/C# = 1 (data) Max=31byte
 
         for(uint8_t cntByteLine=0;cntByteLine<SSD1306_CHARLINEDATA_SIZE;cntByteLine++){
@@ -288,7 +309,7 @@ void SSD1306_display1LineWithShiftUp(char* input){
             fonts[ssd1306_displayBuffer[page][chara]-FONTDATA_OFFSET][cntByteLine]
           );
         }
-        Wire.endTransmission();
+        endI2CTransmission();
 
       }
     }
@@ -307,7 +328,7 @@ void SSD1306_display1LineWithShiftUp(char* input){
     }
 
     //書き込み
-    Wire.beginTransmission(ADDRESS_SSD1306);
+    beginI2CTransmission(ADDRESS_SSD1306);
 
     //ページ指定
     Wire.write(0b10000000); //control byte, Co bit = 1 (1byte only), D/C# = 0 (command)
@@ -319,10 +340,10 @@ void SSD1306_display1LineWithShiftUp(char* input){
         Wire.write(0); //Column Start Address(0-127)
         Wire.write(127); //Column Stop Address(0-127)
 
-    Wire.endTransmission();
+    endI2CTransmission();
 
     for(uint8_t chara=0;chara<SSD1306_CHARS_SIZE;chara++){//ページ内全文字を対象
-      Wire.beginTransmission(ADDRESS_SSD1306);
+      beginI2CTransmission(ADDRESS_SSD1306);
       Wire.write(0b01000000); //control byte, Co bit = 0 (continue), D/C# = 1 (data) Max=31byte
 
       for(uint8_t cntByteLine=0;cntByteLine<SSD1306_CHARLINEDATA_SIZE;cntByteLine++){
@@ -330,7 +351,7 @@ void SSD1306_display1LineWithShiftUp(char* input){
           fonts[ssd1306_displayBuffer[updatePage][chara]-FONTDATA_OFFSET][cntByteLine]
         );
       }
-      Wire.endTransmission();
+      endI2CTransmission();
 
     }
 
@@ -348,7 +369,7 @@ void SSD1306_FullFillSample(){
 
   for(page=0;page<SSD1306_PAGES_SIZE;page++){//全ページを対象
 
-    Wire.beginTransmission(ADDRESS_SSD1306);
+    beginI2CTransmission(ADDRESS_SSD1306);
 
     //ページ指定
     Wire.write(0b10000000); //control byte, Co bit = 1 (1byte only), D/C# = 0 (command)
@@ -360,16 +381,16 @@ void SSD1306_FullFillSample(){
         Wire.write(0); //Column Start Address(0-127)
         Wire.write(127); //Column Stop Address(0-127)
 
-    Wire.endTransmission();
+    endI2CTransmission();
 
     for(chara=0;chara<SSD1306_CHARS_SIZE;chara++){//ページ内全文字を対象
-      Wire.beginTransmission(ADDRESS_SSD1306);
+      beginI2CTransmission(ADDRESS_SSD1306);
       Wire.write(0b01000000); //control byte, Co bit = 0 (continue), D/C# = 1 (data) Max=31byte
 
       for(cntByteLine=0;cntByteLine<SSD1306_CHARLINEDATA_SIZE;cntByteLine++){
         Wire.write(fonts[fontCount][cntByteLine]);
       }
-      Wire.endTransmission();
+      endI2CTransmission();
 
       //どの文字を表示するか決定．配列の添え字．
       fontCount++;
@@ -383,7 +404,7 @@ void SSD1306_FullFillSample(){
 
 //OLED SSD1306 初期化
 void SSD1306_Init(){
-  Wire.beginTransmission(ADDRESS_SSD1306);//※このバイトも含め、以後、合計32byteまで送信できる
+  beginI2CTransmission(ADDRESS_SSD1306);//※このバイトも含め、以後、合計32byteまで送信できる
 
   Wire.write(0b10000000); //control byte, Co bit = 1, D/C# = 0 (command)
   Wire.write(0xAE); //display off
@@ -427,9 +448,9 @@ void SSD1306_Init(){
     Wire.write(0x20); //Set Memory Addressing Mode
       Wire.write(0x10); //Page addressing mode
 
-  Wire.endTransmission();
+  endI2CTransmission();
 
-  Wire.beginTransmission(ADDRESS_SSD1306);
+  beginI2CTransmission(ADDRESS_SSD1306);
 
   Wire.write(0b00000000); //control byte, Co bit = 0, D/C# = 0 (command)
     Wire.write(0x22); //Set Page Address
@@ -448,7 +469,7 @@ void SSD1306_Init(){
   Wire.write(0b10000000); //control byte, Co bit = 1, D/C# = 0 (command)
     Wire.write(0xAF); //Display On 0xAF
 
-  Wire.endTransmission();
+  endI2CTransmission();
 
   return;
 }
@@ -458,22 +479,22 @@ void SSD1306_ClearAll(){
   uint8_t i, j, k;
   
   for(i = 0; i < SSD1306_PAGES_SIZE; i++){//Page(0-7)
-    Wire.beginTransmission(ADDRESS_SSD1306);
+    beginI2CTransmission(ADDRESS_SSD1306);
       Wire.write(0b10000000); //control byte, Co bit = 1 (1byte only), D/C# = 0 (command)
         Wire.write(0xB0 | i); //set page start address(B0～B7)
       Wire.write(0b00000000);
         Wire.write(0x21); //set Column Address
           Wire.write(0); //Column Start Address(0-127)
           Wire.write(127); //Column Stop Address(0-127)
-    Wire.endTransmission();
+    endI2CTransmission();
   
     for(j = 0; j < SSD1306_CHARS_SIZE; j++){//column = 8byte x 16
-      Wire.beginTransmission(ADDRESS_SSD1306);
+      beginI2CTransmission(ADDRESS_SSD1306);
       Wire.write(0b01000000); //control byte, Co bit = 0 (continue), D/C# = 1 (data)
       for(k = 0; k < SSD1306_CHARLINEDATA_SIZE; k++){ //continue to 31byte
         Wire.write(0x00);
       }
-      Wire.endTransmission();
+      endI2CTransmission();
     }
   }
   return;
@@ -481,10 +502,10 @@ void SSD1306_ClearAll(){
 
 //IMU BNO055 コンフィグ用write関数
 void BNO055_Write(byte reg, byte value, int delayMs){
-  Wire.beginTransmission(ADDRESS_BNO055);
+  beginI2CTransmission(ADDRESS_BNO055);
   Wire.write(reg);
   Wire.write(value);
-  Wire.endTransmission();
+  endI2CTransmission();
   delay(delayMs);
   return;
 }
@@ -493,45 +514,45 @@ void BNO055_Write(byte reg, byte value, int delayMs){
 void BNO055_getRawData(){
   uint8_t buffer[8];
 
-  Wire.beginTransmission(ADDRESS_BNO055);  
+  beginI2CTransmission(ADDRESS_BNO055);  
     Wire.write(REG_BNO055_GYRO);
-  Wire.endTransmission(false);
+  endI2CTransmission();
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
   sensorsDataBuffer[GYRO_X] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/16.0;
   sensorsDataBuffer[GYRO_Y] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/16.0;
   sensorsDataBuffer[GYRO_Z] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/16.0;
 
-  Wire.beginTransmission(ADDRESS_BNO055);  
+  beginI2CTransmission(ADDRESS_BNO055);  
     Wire.write(REG_BNO055_MAG);
-  Wire.endTransmission(false);
+  endI2CTransmission();
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
   sensorsDataBuffer[MAG_X] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/16.0;
   sensorsDataBuffer[MAG_Y] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/16.0;
   sensorsDataBuffer[MAG_Z] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/16.0;
 
-  Wire.beginTransmission(ADDRESS_BNO055);  
+  beginI2CTransmission(ADDRESS_BNO055);  
     Wire.write(REG_BNO055_ACC);
-  Wire.endTransmission(false);
+  endI2CTransmission();
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
   sensorsDataBuffer[ACC_X] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/100.0;
   sensorsDataBuffer[ACC_Y] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/100.0;
   sensorsDataBuffer[ACC_Z] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/100.0;
 
-  Wire.beginTransmission(ADDRESS_BNO055);  
+  beginI2CTransmission(ADDRESS_BNO055);  
     Wire.write(REG_BNO055_LIA);
-  Wire.endTransmission(false);
+  endI2CTransmission();
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
   sensorsDataBuffer[LACC_X] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/100.0;
   sensorsDataBuffer[LACC_Y] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/100.0;
   sensorsDataBuffer[LACC_Z] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/100.0;
 
-  Wire.beginTransmission(ADDRESS_BNO055);  
+  beginI2CTransmission(ADDRESS_BNO055);  
     Wire.write(REG_BNO055_QUA);
-  Wire.endTransmission(false);
+  endI2CTransmission();
   Wire.requestFrom(ADDRESS_BNO055, 8);
     Wire.readBytes(buffer, 8);
   sensorsDataBuffer[QW] = (double)((int16_t)((((uint16_t)buffer[1]) << 8) | ((uint16_t)buffer[0])))*(1.0 / (1 << 14));
@@ -544,9 +565,9 @@ void BNO055_getRawData(){
 
 //IMU BNO055 初期化
 void BNO055_Init(){
-  Wire.beginTransmission(ADDRESS_BNO055);
+  beginI2CTransmission(ADDRESS_BNO055);
   Wire.write(0x00);
-  Wire.endTransmission();
+  endI2CTransmission();
 
   Wire.requestFrom(ADDRESS_BNO055, 1);
   if(Wire.read() == 0xa0){
