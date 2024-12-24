@@ -33,8 +33,6 @@ double sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
 uint16_t I2CActiveFlags=0b0000000000000000;
 
-const uint8_t sensorsAddress
-
 enum SensorsBufferNUM{
   GYRO_X,
   GYRO_Y,
@@ -69,7 +67,7 @@ enum I2CSensorsNUM{
   LED_BlinkM,
   SERVO_PCA9685,
   ADC_ADS1115
-}
+};
 
 //ディスプレイ描画バッファ
 uint8_t ssd1306_displayBuffer[SSD1306_PAGES_SIZE][SSD1306_CHARS_SIZE]={
