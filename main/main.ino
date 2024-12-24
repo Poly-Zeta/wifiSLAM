@@ -183,12 +183,25 @@ void SSD1306_displaySensorsData(){
       updateChar=10;
       updateSize=5;
       break;
+    case HUMID:
+      dtostrf(sensorsDataBuffer[cnt],5,1,buf);
+      updatePage=2;
+      updateChar=2;
+      updateSize=5;
+      break;
+    case TEMP:
+      dtostrf(sensorsDataBuffer[cnt],5,1,buf);
+      updatePage=2;
+      updateChar=10;
+      updateSize=5;
+      break;
+    case PRESS:
+      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
+      updatePage=3;
+      updateChar=6;
+      updateSize=7;
+      break;
   }
-  // else if(cnt==1){//humit
-
-  // }else if(cnt==1){//temp
-
-  // }else if(cnt==1){//pressure
 
   // }else if(cnt==1){//lwh
 
@@ -229,7 +242,7 @@ void SSD1306_displaySensorsData(){
   }
 
   cnt++;
-  if(cnt>=SENSORS_DISPLAY_OFFSET+4){//SENSORS){
+  if(cnt>=SENSORS_DISPLAY_OFFSET+7){//SENSORS){
     cnt=SENSORS_DISPLAY_OFFSET;
   }
   // Serial.print("next cnt:");
