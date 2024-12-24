@@ -576,7 +576,7 @@ void setup() {
 void loop() {
   unsigned long millis_buf = millis();//1ループの開始時間はとっておく
   
-  byte buffer[8];    
+  uint8_t buffer[8];    
 
   //IMUの読み出し
   // -> TODO:書き込み先の配列を引数にした関数にする
@@ -589,9 +589,9 @@ void loop() {
   Wire.endTransmission(false);
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
-  GYRO[0] = (double)(((int16_t)buffer[0]) | (((int16_t)buffer[1]) << 8))/16.0;
-  GYRO[1] = (double)(((int16_t)buffer[2]) | (((int16_t)buffer[3]) << 8))/16.0;
-  GYRO[2] = (double)(((int16_t)buffer[4]) | (((int16_t)buffer[5]) << 8))/16.0;
+  GYRO[0] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/16.0;
+  GYRO[1] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/16.0;
+  GYRO[2] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/16.0;
 
   double MAG[3];
   Wire.beginTransmission(ADDRESS_BNO055);  
@@ -599,9 +599,9 @@ void loop() {
   Wire.endTransmission(false);
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
-  MAG[0] = (double)(((int16_t)buffer[0]) | (((int16_t)buffer[1]) << 8))/16.0;
-  MAG[1] = (double)(((int16_t)buffer[2]) | (((int16_t)buffer[3]) << 8))/16.0;
-  MAG[2] = (double)(((int16_t)buffer[4]) | (((int16_t)buffer[5]) << 8))/16.0;
+  MAG[0] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/16.0;
+  MAG[1] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/16.0;
+  MAG[2] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/16.0;
 
   double ACC[3];
   Wire.beginTransmission(ADDRESS_BNO055);  
@@ -609,9 +609,9 @@ void loop() {
   Wire.endTransmission(false);
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
-  ACC[0] = (double)(((int16_t)buffer[0]) | (((int16_t)buffer[1]) << 8))/100.0;
-  ACC[1] = (double)(((int16_t)buffer[2]) | (((int16_t)buffer[3]) << 8))/100.0;
-  ACC[2] = (double)(((int16_t)buffer[4]) | (((int16_t)buffer[5]) << 8))/100.0;
+  ACC[0] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/100.0;
+  ACC[1] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/100.0;
+  ACC[2] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/100.0;
 
   double LIA[3];
   Wire.beginTransmission(ADDRESS_BNO055);  
@@ -619,9 +619,9 @@ void loop() {
   Wire.endTransmission(false);
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
-  LIA[0] = (double)(((int16_t)buffer[0]) | (((int16_t)buffer[1]) << 8))/100.0;
-  LIA[1] = (double)(((int16_t)buffer[2]) | (((int16_t)buffer[3]) << 8))/100.0;
-  LIA[2] = (double)(((int16_t)buffer[4]) | (((int16_t)buffer[5]) << 8))/100.0;
+  LIA[0] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/100.0;
+  LIA[1] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/100.0;
+  LIA[2] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/100.0;
 
   double QUA[4];
   Wire.beginTransmission(ADDRESS_BNO055);  
@@ -629,10 +629,10 @@ void loop() {
   Wire.endTransmission(false);
   Wire.requestFrom(ADDRESS_BNO055, 8);
     Wire.readBytes(buffer, 8);
-  QUA[0] = (int16_t)((((uint16_t)buffer[1]) << 8) | ((uint16_t)buffer[0]))*(1.0 / (1 << 14));
-  QUA[1] = (int16_t)((((uint16_t)buffer[3]) << 8) | ((uint16_t)buffer[2]))*(1.0 / (1 << 14));
-  QUA[2] = (int16_t)((((uint16_t)buffer[5]) << 8) | ((uint16_t)buffer[4]))*(1.0 / (1 << 14));
-  QUA[3] = (int16_t)((((uint16_t)buffer[7]) << 8) | ((uint16_t)buffer[6]))*(1.0 / (1 << 14));
+  QUA[0] = (double)((int16_t)((((uint16_t)buffer[1]) << 8) | ((uint16_t)buffer[0])))*(1.0 / (1 << 14));
+  QUA[1] = (double)((int16_t)((((uint16_t)buffer[3]) << 8) | ((uint16_t)buffer[2])))*(1.0 / (1 << 14));
+  QUA[2] = (double)((int16_t)((((uint16_t)buffer[5]) << 8) | ((uint16_t)buffer[4])))*(1.0 / (1 << 14));
+  QUA[3] = (double)((int16_t)((((uint16_t)buffer[7]) << 8) | ((uint16_t)buffer[6])))*(1.0 / (1 << 14));
 
   //サンプル QUAT->EULAR(XYZ)
   // double ysqr = QUA[2] * QUA[2];
@@ -692,7 +692,7 @@ void loop() {
   Serial.print(QUA[2]);
   Serial.print(",");
   Serial.print(QUA[3]);
-  // Serial.print(",");
+  Serial.print(",");
   
   // Serial.print(roll);
   // Serial.print(",");
@@ -701,6 +701,7 @@ void loop() {
   // Serial.print(yaw);
   // Serial.print(",");
 
+  // Serial.print("2000,-2000");
   Serial.println();
 
   SSD1306_displaySensorsData(QUA[0],QUA[1],QUA[2],QUA[3]);
