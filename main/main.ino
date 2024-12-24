@@ -33,6 +33,11 @@ double sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
 uint16_t I2CActiveFlags=0b0000000000000000;
 
+signed long int t_fine;
+uint16_t dig_T1,dig_P1;
+int16_t dig_T2,dig_T3,dig_P2,dig_P3,dig_P4,dig_P5,dig_P6,dig_P7,dig_P8,dig_P9,dig_H2,dig_H4,dig_H5;
+int8_t  dig_H1,dig_H3,dig_H6;
+
 enum SensorsBufferNUM{
   GYRO_X,
   GYRO_Y,
@@ -178,12 +183,25 @@ void SSD1306_displaySensorsData(){
       updateChar=10;
       updateSize=5;
       break;
+    case HUMID:
+      dtostrf(sensorsDataBuffer[cnt],5,1,buf);
+      updatePage=2;
+      updateChar=2;
+      updateSize=5;
+      break;
+    case TEMP:
+      dtostrf(sensorsDataBuffer[cnt],5,1,buf);
+      updatePage=2;
+      updateChar=10;
+      updateSize=5;
+      break;
+    case PRESS:
+      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
+      updatePage=3;
+      updateChar=6;
+      updateSize=7;
+      break;
   }
-  // else if(cnt==1){//humit
-
-  // }else if(cnt==1){//temp
-
-  // }else if(cnt==1){//pressure
 
   // }else if(cnt==1){//lwh
 
@@ -224,7 +242,7 @@ void SSD1306_displaySensorsData(){
   }
 
   cnt++;
-  if(cnt>=SENSORS_DISPLAY_OFFSET+4){//SENSORS){
+  if(cnt>=SENSORS_DISPLAY_OFFSET+7){//SENSORS){
     cnt=SENSORS_DISPLAY_OFFSET;
   }
   // Serial.print("next cnt:");
@@ -575,6 +593,154 @@ void BNO055_Init(){
   return;
 }
 
+//温度センサ BME280 初期化
+void BME280_Init(){
+  Wire.beginTransmission(ADDRESS_BME280);
+  Wire.write(0xF2);
+  Wire.write(0x01);
+  Wire.endTransmission();
+
+  Wire.beginTransmission(ADDRESS_BME280);
+  Wire.write(0xF4);
+  Wire.write((0x01<<5)|(0x01<<2)|(0x03));
+  Wire.endTransmission();
+
+  Wire.beginTransmission(ADDRESS_BME280);
+  Wire.write(0xF5);
+  Wire.write((0x05<<5)|(0<<2)|(0));
+  Wire.endTransmission();
+
+  BME280_readTrim();
+  return;
+}
+
+void BME280_readTrim(){
+  uint8_t data[32],i=0;                      // Fix 2014/04/06
+  Wire.beginTransmission(ADDRESS_BME280);
+  Wire.write(0x88);
+  Wire.endTransmission();
+  Wire.requestFrom(ADDRESS_BME280,24);       // Fix 2014/04/06
+  while(Wire.available()){
+    data[i] = Wire.read();
+    i++;
+  }
+  
+  Wire.beginTransmission(ADDRESS_BME280);    // Add 2014/04/06
+  Wire.write(0xA1);                          // Add 2014/04/06
+  Wire.endTransmission();                    // Add 2014/04/06
+  Wire.requestFrom(ADDRESS_BME280,1);        // Add 2014/04/06
+  data[i] = Wire.read();                     // Add 2014/04/06
+  i++;                                       // Add 2014/04/06
+  
+  Wire.beginTransmission(ADDRESS_BME280);
+  Wire.write(0xE1);
+  Wire.endTransmission();
+  Wire.requestFrom(ADDRESS_BME280,7);        // Fix 2014/04/06
+  while(Wire.available()){
+    data[i] = Wire.read();
+    i++;    
+  }
+  dig_T1 = (data[1] << 8) | data[0];
+  dig_T2 = (data[3] << 8) | data[2];
+  dig_T3 = (data[5] << 8) | data[4];
+  dig_P1 = (data[7] << 8) | data[6];
+  dig_P2 = (data[9] << 8) | data[8];
+  dig_P3 = (data[11]<< 8) | data[10];
+  dig_P4 = (data[13]<< 8) | data[12];
+  dig_P5 = (data[15]<< 8) | data[14];
+  dig_P6 = (data[17]<< 8) | data[16];
+  dig_P7 = (data[19]<< 8) | data[18];
+  dig_P8 = (data[21]<< 8) | data[20];
+  dig_P9 = (data[23]<< 8) | data[22];
+  dig_H1 = data[24];
+  dig_H2 = (data[26]<< 8) | data[25];
+  dig_H3 = data[27];
+  dig_H4 = (data[28]<< 4) | (0x0F & data[29]);
+  dig_H5 = (data[30] << 4) | ((data[29] >> 4) & 0x0F); // Fix 2014/04/06
+  dig_H6 = data[31];                                   // Fix 2014/04/06
+  return;
+}
+
+signed long int BME280_calibration_Temperature(signed long int adc_T){
+  signed long int var1, var2, T;
+  var1 = ((((adc_T >> 3) - ((signed long int)dig_T1<<1))) * ((signed long int)dig_T2)) >> 11;
+  var2 = (((((adc_T >> 4) - ((signed long int)dig_T1)) * ((adc_T>>4) - ((signed long int)dig_T1))) >> 12) * ((signed long int)dig_T3)) >> 14;
+  
+  t_fine = var1 + var2;
+  T = (t_fine * 5 + 128) >> 8;
+  return T; 
+}
+
+unsigned long int BME280_calibration_Pressure(unsigned long int adc_P){
+  signed long int var1, var2;
+  unsigned long int P;
+  var1 = (((signed long int)t_fine)>>1) - (signed long int)64000;
+  var2 = (((var1>>2) * (var1>>2)) >> 11) * ((signed long int)dig_P6);
+  var2 = var2 + ((var1*((signed long int)dig_P5))<<1);
+  var2 = (var2>>2)+(((signed long int)dig_P4)<<16);
+  var1 = (((dig_P3 * (((var1>>2)*(var1>>2)) >> 13)) >>3) + ((((signed long int)dig_P2) * var1)>>1))>>18;
+  var1 = ((((32768+var1))*((signed long int)dig_P1))>>15);
+  if (var1 == 0){
+      return 0;
+  }    
+  P = (((unsigned long int)(((signed long int)1048576)-adc_P)-(var2>>12)))*3125;
+  if(P<0x80000000){
+      P = (P << 1) / ((unsigned long int) var1);   
+  }else{
+      P = (P / (unsigned long int)var1) * 2;    
+  }
+  var1 = (((signed long int)dig_P9) * ((signed long int)(((P>>3) * (P>>3))>>13)))>>12;
+  var2 = (((signed long int)(P>>2)) * ((signed long int)dig_P8))>>13;
+  P = (unsigned long int)((signed long int)P + ((var1 + var2 + dig_P7) >> 4));
+  return P;
+}
+
+unsigned long int BME280_calibration_Humidity(unsigned long int adc_H){
+  signed long int v_x1;
+  
+  v_x1 = (t_fine - ((signed long int)76800));
+  v_x1 = (((((adc_H << 14) -(((signed long int)dig_H4) << 20) - (((signed long int)dig_H5) * v_x1)) + 
+            ((signed long int)16384)) >> 15) * (((((((v_x1 * ((signed long int)dig_H6)) >> 10) * 
+            (((v_x1 * ((signed long int)dig_H3)) >> 11) + ((signed long int) 32768))) >> 10) + (( signed long int)2097152)) * 
+            ((signed long int) dig_H2) + 8192) >> 14));
+  v_x1 = (v_x1 - (((((v_x1 >> 15) * (v_x1 >> 15)) >> 7) * ((signed long int)dig_H1)) >> 4));
+  v_x1 = (v_x1 < 0 ? 0 : v_x1);
+  v_x1 = (v_x1 > 419430400 ? 419430400 : v_x1);
+  return (unsigned long int)(v_x1 >> 12);   
+}
+
+//BME280 値更新
+void BME280_getRawData(){
+  int i = 0;
+  uint32_t data[8];
+  unsigned long int buff[3];
+  signed long int temp_cal;
+  unsigned long int press_cal,hum_cal;
+
+  Wire.beginTransmission(ADDRESS_BME280);
+  Wire.write(0xF7);
+  Wire.endTransmission();
+  Wire.requestFrom(ADDRESS_BME280,8);
+  while(Wire.available()){
+      data[i] = Wire.read();
+      i++;
+  }
+
+  buff[0]=(unsigned long int)((data[3] << 12) | (data[4] << 4) | (data[5] >> 4));
+  buff[1]=(unsigned long int)((data[0] << 12) | (data[1] << 4) | (data[2] >> 4));
+  buff[2]=(unsigned long int)((data[6] << 8) | data[7]);
+
+  temp_cal  = BME280_calibration_Temperature(buff[0]);
+  press_cal = BME280_calibration_Pressure(buff[1]);
+  hum_cal   = BME280_calibration_Humidity(buff[2]);
+
+  sensorsDataBuffer[TEMP]  = (double)temp_cal  /  100.0;
+  sensorsDataBuffer[PRESS] = (double)press_cal /  100.0;
+  sensorsDataBuffer[HUMID] = (double)hum_cal   / 1024.0;
+
+  return;
+}
+
 //センサ値のシリアル出力
 void SerialOutput(){
   //起動後時間，角速度，磁気，加速度，線形加速度，四元数，(温度，湿度，気圧，左モータ回転，右モータ回転)
@@ -618,6 +784,13 @@ void SerialOutput(){
   Serial.print(sensorsDataBuffer[QZ]);
   Serial.print(",");
   
+  Serial.print(sensorsDataBuffer[TEMP]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[HUMID]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[PRESS]);
+  Serial.print(",");
+
   // Serial.print("2000,-2000");
   Serial.println();
 
@@ -656,16 +829,15 @@ void setup() {
 
 
   SSD1306_display1LineWithShiftUp("BNO055 SETUP");//IMU BNO055初期化
-  // delay(300);
   BNO055_Init();
   SSD1306_display1LineWithShiftUp("BNO055 STANDBY");
   // SSD1306_display1LineWithShiftUp("BNO055 SKIP");
 
 
   SSD1306_display1LineWithShiftUp("BME280 SETUP");
-  delay(300);
-  // SSD1306_display1LineWithShiftUp("BME280 STANDBY");
-  SSD1306_display1LineWithShiftUp("BME280 SKIP");
+  BME280_Init();
+  SSD1306_display1LineWithShiftUp("BME280 STANDBY");
+  // SSD1306_display1LineWithShiftUp("BME280 SKIP");
   delay(300);
 
   // Serial.print("setup end");
@@ -690,6 +862,9 @@ void loop() {
   
   //IMUの値更新
   BNO055_getRawData();
+
+  //温度計の値更新
+  BME280_getRawData();
 
   //センサデータのシリアル出力
   SerialOutput();
