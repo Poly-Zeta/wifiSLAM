@@ -589,9 +589,9 @@ void loop() {
   Wire.endTransmission(false);
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
-  GYRO[0] = double(BNO055_Merge(buffer[0], buffer[1]))/16.0;
-  GYRO[1] = double(BNO055_Merge(buffer[2], buffer[3]))/16.0;
-  GYRO[2] = double(BNO055_Merge(buffer[4], buffer[5]))/16.0;
+  GYRO[0] = (double)(((int16_t)buffer[0]) | (((int16_t)buffer[1]) << 8))/16.0;
+  GYRO[1] = (double)(((int16_t)buffer[2]) | (((int16_t)buffer[3]) << 8))/16.0;
+  GYRO[2] = (double)(((int16_t)buffer[4]) | (((int16_t)buffer[5]) << 8))/16.0;
 
   double MAG[3];
   Wire.beginTransmission(ADDRESS_BNO055);  
@@ -599,9 +599,9 @@ void loop() {
   Wire.endTransmission(false);
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
-  MAG[0] = double(BNO055_Merge(buffer[0], buffer[1]))/16.0;
-  MAG[1] = double(BNO055_Merge(buffer[2], buffer[3]))/16.0;
-  MAG[2] = double(BNO055_Merge(buffer[4], buffer[5]))/16.0;
+  MAG[0] = (double)(((int16_t)buffer[0]) | (((int16_t)buffer[1]) << 8))/16.0;
+  MAG[1] = (double)(((int16_t)buffer[2]) | (((int16_t)buffer[3]) << 8))/16.0;
+  MAG[2] = (double)(((int16_t)buffer[4]) | (((int16_t)buffer[5]) << 8))/16.0;
 
   double ACC[3];
   Wire.beginTransmission(ADDRESS_BNO055);  
@@ -609,19 +609,19 @@ void loop() {
   Wire.endTransmission(false);
   Wire.requestFrom(ADDRESS_BNO055, 6);
     Wire.readBytes(buffer, 6);
-  ACC[0] = double(BNO055_Merge(buffer[0], buffer[1]))/100.0;
-  ACC[1] = double(BNO055_Merge(buffer[2], buffer[3]))/100.0;
-  ACC[2] = double(BNO055_Merge(buffer[4], buffer[5]))/100.0;
+  ACC[0] = (double)(((int16_t)buffer[0]) | (((int16_t)buffer[1]) << 8))/100.0;
+  ACC[1] = (double)(((int16_t)buffer[2]) | (((int16_t)buffer[3]) << 8))/100.0;
+  ACC[2] = (double)(((int16_t)buffer[4]) | (((int16_t)buffer[5]) << 8))/100.0;
 
-  // double LIA[3];
-  // Wire.beginTransmission(ADDRESS_BNO055);  
-  //   Wire.write(REG_BNO055_LIA);
-  // Wire.endTransmission(false);
-  // Wire.requestFrom(ADDRESS_BNO055, 6);
-  //   Wire.readBytes(buffer, 6);
-  // LIA[0] = double(BNO055_Merge(buffer[0], buffer[1]))/100.0;
-  // LIA[1] = double(BNO055_Merge(buffer[2], buffer[3]))/100.0;
-  // LIA[2] = double(BNO055_Merge(buffer[4], buffer[5]))/100.0;
+  double LIA[3];
+  Wire.beginTransmission(ADDRESS_BNO055);  
+    Wire.write(REG_BNO055_LIA);
+  Wire.endTransmission(false);
+  Wire.requestFrom(ADDRESS_BNO055, 6);
+    Wire.readBytes(buffer, 6);
+  LIA[0] = (double)(((int16_t)buffer[0]) | (((int16_t)buffer[1]) << 8))/100.0;
+  LIA[1] = (double)(((int16_t)buffer[2]) | (((int16_t)buffer[3]) << 8))/100.0;
+  LIA[2] = (double)(((int16_t)buffer[4]) | (((int16_t)buffer[5]) << 8))/100.0;
 
   double QUA[4];
   Wire.beginTransmission(ADDRESS_BNO055);  
@@ -678,12 +678,12 @@ void loop() {
   Serial.print(ACC[2]);
   Serial.print(",");
   
-  // Serial.print(LIA[0]);
-  // Serial.print(",");
-  // Serial.print(LIA[1]);
-  // Serial.print(",");
-  // Serial.print(LIA[2]);
-  // Serial.print(",");
+  Serial.print(LIA[0]);
+  Serial.print(",");
+  Serial.print(LIA[1]);
+  Serial.print(",");
+  Serial.print(LIA[2]);
+  Serial.print(",");
   
   Serial.print(QUA[0]);
   Serial.print(",");
