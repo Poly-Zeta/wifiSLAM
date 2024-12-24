@@ -10,7 +10,35 @@
 #define FONTDATA_SIZE 59
 #define FONTDATA_OFFSET 0x20
 
-#define SENSORS 11
+#define SENSORS 23
+#define SENSORS_DISPLAY_OFFSET 12
+
+enum Sensors{
+  GYRO_X,
+  GYRO_Y,
+  GYRO_Z,
+  MAG_X,
+  MAG_Y,
+  MAG_Z,
+  ACC_X,
+  ACC_Y,
+  ACC_Z,
+  LACC_X,
+  LACC_Y,
+  LACC_Z,
+  QW,
+  QX,
+  QY,
+  QZ,
+  HUMID,
+  TEMP,
+  PRESS,
+  L_WHEEL,
+  R_WHEEL,
+  A_IN0,
+  A_IN1
+};
+Sensors sensors;
 
 const uint8_t ADDRESS_SSD1306 =  0x3C;
 const uint8_t ADDRESS_BNO055  =  0x28;
@@ -21,8 +49,7 @@ const uint8_t REG_BNO055_GYRO  =  0x14;
 const uint8_t REG_BNO055_QUA   =  0x20;
 const uint8_t REG_BNO055_LIA   =  0x28;
 
-//qx,qy,qz,qw,humit,temp,press,l-odom,r-odom,a-in1,a-in2
-float system_sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0};
+double sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 uint8_t ssd1306_displayBuffer[SSD1306_PAGES_SIZE][SSD1306_CHARS_SIZE]={
   {0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60},
@@ -97,37 +124,39 @@ const uint8_t fonts[FONTDATA_SIZE][SSD1306_CHARLINEDATA_SIZE]={
   {0x00,0xC6,0xC6,0xE6,0xD6,0xCE,0xC6,0xC6}// Z 5A
 };
 
-void SSD1306_displaySensorsData(double qw,double qx,double qy,double qz){//,float humit, float temp, float pressure, int lwheel, int rwheel){
-  static uint8_t cnt=0;
+void SSD1306_displaySensorsData(){
+  static uint8_t cnt=SENSORS_DISPLAY_OFFSET;
 
   uint8_t updatePage,updateChar,updateSize;
 
   char buf[SSD1306_CHARS_SIZE];
 
-  if(cnt==0){//qw
-    dtostrf(qw,5,2,buf);
-    updatePage=0;
-    updateChar=2;
-    updateSize=5;
-    // Serial.print(qw);
-  }else if(cnt==1){//qx
-    dtostrf(qx,5,2,buf);
-    updatePage=0;
-    updateChar=10;
-    updateSize=5;
-    // Serial.print(qx);
-  }else if(cnt==2){//qy
-    dtostrf(qy,5,2,buf);
-    updatePage=1;
-    updateChar=2;
-    updateSize=5;
-    // Serial.print(qy);
-  }else if(cnt==3){//qz
-    dtostrf(qz,5,2,buf);
-    updatePage=1;
-    updateChar=10;
-    updateSize=5;
-    // Serial.print(qz);
+  //択が多いためswitch-caseに置換
+  switch(cnt){
+    case QW:
+      dtostrf(sensorsDataBuffer[cnt],5,2,buf);
+      updatePage=0;
+      updateChar=2;
+      updateSize=5;
+      break;
+    case QX:
+      dtostrf(sensorsDataBuffer[cnt],5,2,buf);
+      updatePage=0;
+      updateChar=10;
+      updateSize=5;
+      break;
+    case QY:
+      dtostrf(sensorsDataBuffer[cnt],5,2,buf);
+      updatePage=1;
+      updateChar=2;
+      updateSize=5;
+      break;
+    case QZ:
+      dtostrf(sensorsDataBuffer[cnt],5,2,buf);
+      updatePage=1;
+      updateChar=10;
+      updateSize=5;
+      break;
   }
   // else if(cnt==1){//humit
 
@@ -141,34 +170,9 @@ void SSD1306_displaySensorsData(double qw,double qx,double qy,double qz){//,floa
 
   // }
   
-  // Serial.print("->");
-  // Serial.print(buf);
-  // Serial.println();
-
-
-  //updatePageのバッファを更新
-  // Serial.print("before:");
-  // for(uint8_t chars=0;chars<16;chars++){
-  //   Serial.print((char)ssd1306_displayBuffer[updatePage][chars]);
-  // }
-  // Serial.println();s
   for(uint8_t chars=0;chars<updateSize;chars++){
     ssd1306_displayBuffer[updatePage][updateChar+chars]=(uint8_t)buf[chars];
-
-    // Serial.print("chars:");
-    // Serial.print(chars);
-    // Serial.print(", (uint8_t)buf[chars]:");
-    // Serial.print((uint8_t)buf[chars]);
-    // Serial.print(", buf[chars]:");
-    // Serial.print(buf[chars]);
-    // Serial.print(",");
-    // Serial.println();
   }
-  // Serial.print("after :");
-  // for(uint8_t chars=0;chars<16;chars++){
-  //   Serial.print((char)ssd1306_displayBuffer[updatePage][chars]);
-  // }
-  //   Serial.println();
 
   //書き込み
   Wire.beginTransmission(ADDRESS_SSD1306);
@@ -199,8 +203,8 @@ void SSD1306_displaySensorsData(double qw,double qx,double qy,double qz){//,floa
   }
 
   cnt++;
-  if(cnt>=4){
-    cnt=0;
+  if(cnt>=SENSORS_DISPLAY_OFFSET+4){//SENSORS){
+    cnt=SENSORS_DISPLAY_OFFSET;
   }
   // Serial.print("next cnt:");
   // Serial.print(cnt);
@@ -452,12 +456,7 @@ void SSD1306_ClearAll(){
   return;
 }
 
-int BNO055_Merge(byte low, byte high){
-  int result = low | (high << 8);
-
-  return result;
-}
-
+//IMU BNO055 コンフィグ用write関数
 void BNO055_Write(byte reg, byte value, int delayMs){
   Wire.beginTransmission(ADDRESS_BNO055);
   Wire.write(reg);
@@ -468,11 +467,58 @@ void BNO055_Write(byte reg, byte value, int delayMs){
 }
 
 void BNO055_getRawData(){
-//todo
-  return;
+  uint8_t buffer[8];
 
+  Wire.beginTransmission(ADDRESS_BNO055);  
+    Wire.write(REG_BNO055_GYRO);
+  Wire.endTransmission(false);
+  Wire.requestFrom(ADDRESS_BNO055, 6);
+    Wire.readBytes(buffer, 6);
+  sensorsDataBuffer[GYRO_X] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/16.0;
+  sensorsDataBuffer[GYRO_Y] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/16.0;
+  sensorsDataBuffer[GYRO_Z] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/16.0;
+
+  Wire.beginTransmission(ADDRESS_BNO055);  
+    Wire.write(REG_BNO055_MAG);
+  Wire.endTransmission(false);
+  Wire.requestFrom(ADDRESS_BNO055, 6);
+    Wire.readBytes(buffer, 6);
+  sensorsDataBuffer[MAG_X] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/16.0;
+  sensorsDataBuffer[MAG_Y] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/16.0;
+  sensorsDataBuffer[MAG_Z] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/16.0;
+
+  Wire.beginTransmission(ADDRESS_BNO055);  
+    Wire.write(REG_BNO055_ACC);
+  Wire.endTransmission(false);
+  Wire.requestFrom(ADDRESS_BNO055, 6);
+    Wire.readBytes(buffer, 6);
+  sensorsDataBuffer[ACC_X] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/100.0;
+  sensorsDataBuffer[ACC_Y] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/100.0;
+  sensorsDataBuffer[ACC_Z] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/100.0;
+
+  Wire.beginTransmission(ADDRESS_BNO055);  
+    Wire.write(REG_BNO055_LIA);
+  Wire.endTransmission(false);
+  Wire.requestFrom(ADDRESS_BNO055, 6);
+    Wire.readBytes(buffer, 6);
+  sensorsDataBuffer[LACC_X] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/100.0;
+  sensorsDataBuffer[LACC_Y] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/100.0;
+  sensorsDataBuffer[LACC_Z] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/100.0;
+
+  Wire.beginTransmission(ADDRESS_BNO055);  
+    Wire.write(REG_BNO055_QUA);
+  Wire.endTransmission(false);
+  Wire.requestFrom(ADDRESS_BNO055, 8);
+    Wire.readBytes(buffer, 8);
+  sensorsDataBuffer[QW] = (double)((int16_t)((((uint16_t)buffer[1]) << 8) | ((uint16_t)buffer[0])))*(1.0 / (1 << 14));
+  sensorsDataBuffer[QX] = (double)((int16_t)((((uint16_t)buffer[3]) << 8) | ((uint16_t)buffer[2])))*(1.0 / (1 << 14));
+  sensorsDataBuffer[QY] = (double)((int16_t)((((uint16_t)buffer[5]) << 8) | ((uint16_t)buffer[4])))*(1.0 / (1 << 14));
+  sensorsDataBuffer[QZ] = (double)((int16_t)((((uint16_t)buffer[7]) << 8) | ((uint16_t)buffer[6])))*(1.0 / (1 << 14));
+
+  return;
 }
 
+//IMU BNO055 初期化
 void BNO055_Init(){
   Wire.beginTransmission(ADDRESS_BNO055);
   Wire.write(0x00);
@@ -507,7 +553,53 @@ void BNO055_Init(){
   return;
 }
 
+void SerialOutput(){
+  //起動後時間，角速度，磁気，加速度，線形加速度，四元数，(温度，湿度，気圧，左モータ回転，右モータ回転)
+  Serial.print(millis());
+  Serial.print(",");
 
+  Serial.print(sensorsDataBuffer[GYRO_X]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[GYRO_Y]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[GYRO_Z]);
+  Serial.print(",");
+  
+  Serial.print(sensorsDataBuffer[MAG_X]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[MAG_Y]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[MAG_Z]);
+  Serial.print(",");
+  
+  Serial.print(sensorsDataBuffer[ACC_X]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[ACC_Y]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[ACC_Z]);
+  Serial.print(",");
+  
+  Serial.print(sensorsDataBuffer[LACC_X]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[LACC_Y]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[LACC_Z]);
+  Serial.print(",");
+  
+  Serial.print(sensorsDataBuffer[QW]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[QX]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[QY]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[QZ]);
+  Serial.print(",");
+  
+  // Serial.print("2000,-2000");
+  Serial.println();
+
+  return;
+}
 
 void setup() {
   Wire.begin();
@@ -530,9 +622,6 @@ void setup() {
   delay(300);
   SSD1306_ClearAll();
   delay(300);
-
-
-
   // Serial.print("SSD1306 set end");
   // Serial.println();
   SSD1306_display1LineWithShiftUp("INIT START");
@@ -576,135 +665,14 @@ void setup() {
 void loop() {
   unsigned long millis_buf = millis();//1ループの開始時間はとっておく
   
-  uint8_t buffer[8];    
+  //IMUの値更新
+  BNO055_getRawData();
 
-  //IMUの読み出し
-  // -> TODO:書き込み先の配列を引数にした関数にする
-  //    センサの生データを関数でもらってきて，main側で/16とかすればよい
-  //    レジスタ番地，書き込み先ポインタ，サイズを引数にする
-  //角速度，磁気，加速度，線形加速度，四元数
-  double GYRO[3];
-  Wire.beginTransmission(ADDRESS_BNO055);  
-    Wire.write(REG_BNO055_GYRO);
-  Wire.endTransmission(false);
-  Wire.requestFrom(ADDRESS_BNO055, 6);
-    Wire.readBytes(buffer, 6);
-  GYRO[0] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/16.0;
-  GYRO[1] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/16.0;
-  GYRO[2] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/16.0;
+  //センサデータのシリアル出力
+  SerialOutput();
 
-  double MAG[3];
-  Wire.beginTransmission(ADDRESS_BNO055);  
-    Wire.write(REG_BNO055_MAG);
-  Wire.endTransmission(false);
-  Wire.requestFrom(ADDRESS_BNO055, 6);
-    Wire.readBytes(buffer, 6);
-  MAG[0] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/16.0;
-  MAG[1] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/16.0;
-  MAG[2] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/16.0;
-
-  double ACC[3];
-  Wire.beginTransmission(ADDRESS_BNO055);  
-    Wire.write(REG_BNO055_ACC);
-  Wire.endTransmission(false);
-  Wire.requestFrom(ADDRESS_BNO055, 6);
-    Wire.readBytes(buffer, 6);
-  ACC[0] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/100.0;
-  ACC[1] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/100.0;
-  ACC[2] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/100.0;
-
-  double LIA[3];
-  Wire.beginTransmission(ADDRESS_BNO055);  
-    Wire.write(REG_BNO055_LIA);
-  Wire.endTransmission(false);
-  Wire.requestFrom(ADDRESS_BNO055, 6);
-    Wire.readBytes(buffer, 6);
-  LIA[0] = (double)(int16_t)((((uint16_t)buffer[0]) | (((uint16_t)buffer[1]) << 8)))/100.0;
-  LIA[1] = (double)(int16_t)((((uint16_t)buffer[2]) | (((uint16_t)buffer[3]) << 8)))/100.0;
-  LIA[2] = (double)(int16_t)((((uint16_t)buffer[4]) | (((uint16_t)buffer[5]) << 8)))/100.0;
-
-  double QUA[4];
-  Wire.beginTransmission(ADDRESS_BNO055);  
-    Wire.write(REG_BNO055_QUA);
-  Wire.endTransmission(false);
-  Wire.requestFrom(ADDRESS_BNO055, 8);
-    Wire.readBytes(buffer, 8);
-  QUA[0] = (double)((int16_t)((((uint16_t)buffer[1]) << 8) | ((uint16_t)buffer[0])))*(1.0 / (1 << 14));
-  QUA[1] = (double)((int16_t)((((uint16_t)buffer[3]) << 8) | ((uint16_t)buffer[2])))*(1.0 / (1 << 14));
-  QUA[2] = (double)((int16_t)((((uint16_t)buffer[5]) << 8) | ((uint16_t)buffer[4])))*(1.0 / (1 << 14));
-  QUA[3] = (double)((int16_t)((((uint16_t)buffer[7]) << 8) | ((uint16_t)buffer[6])))*(1.0 / (1 << 14));
-
-  //サンプル QUAT->EULAR(XYZ)
-  // double ysqr = QUA[2] * QUA[2];
-  // // roll (x-axis rotation)
-  // double t0 = +2.0 * (QUA[0] * QUA[1] + QUA[2] * QUA[3]);
-  // double t1 = +1.0 - 2.0 * (QUA[1] * QUA[1] + ysqr);
-  // double roll = atan2(t0, t1)*57.2957795131;
-  // // pitch (y-axis rotation)
-  // double t2 = +2.0 * (QUA[0] * QUA[2] - QUA[3] * QUA[1]);
-  // t2 = t2 > 1.0 ? 1.0 : t2;
-  // t2 = t2 < -1.0 ? -1.0 : t2;
-  // double pitch = asin(t2)*57.2957795131;
-  // // yaw (z-axis rotation)
-  // double t3 = +2.0 * (QUA[0] * QUA[3] + QUA[1] * QUA[2]);
-  // double t4 = +1.0 - 2.0 * (ysqr + QUA[3] * QUA[3]);  
-  // double yaw = atan2(t3, t4)*57.2957795131;
-
-
-
-  //センサデータのシリアル出力コーナー
-  //起動後時間，角速度，磁気，加速度，(線形加速度，)四元数，(温度，湿度，気圧，左モータ回転，右モータ回転)
-  Serial.print(millis());
-  Serial.print(",");
-
-  Serial.print(GYRO[0]);
-  Serial.print(",");
-  Serial.print(GYRO[1]);
-  Serial.print(",");
-  Serial.print(GYRO[2]);
-  Serial.print(",");
-  
-  Serial.print(MAG[0]);
-  Serial.print(",");
-  Serial.print(MAG[1]);
-  Serial.print(",");
-  Serial.print(MAG[2]);
-  Serial.print(",");
-  
-  Serial.print(ACC[0]);
-  Serial.print(",");
-  Serial.print(ACC[1]);
-  Serial.print(",");
-  Serial.print(ACC[2]);
-  Serial.print(",");
-  
-  Serial.print(LIA[0]);
-  Serial.print(",");
-  Serial.print(LIA[1]);
-  Serial.print(",");
-  Serial.print(LIA[2]);
-  Serial.print(",");
-  
-  Serial.print(QUA[0]);
-  Serial.print(",");
-  Serial.print(QUA[1]);
-  Serial.print(",");
-  Serial.print(QUA[2]);
-  Serial.print(",");
-  Serial.print(QUA[3]);
-  Serial.print(",");
-  
-  // Serial.print(roll);
-  // Serial.print(",");
-  // Serial.print(pitch);
-  // Serial.print(",");
-  // Serial.print(yaw);
-  // Serial.print(",");
-
-  // Serial.print("2000,-2000");
-  Serial.println();
-
-  SSD1306_displaySensorsData(QUA[0],QUA[1],QUA[2],QUA[3]);
+  //センサデータのディスプレイ表示
+  SSD1306_displaySensorsData();
 
   // Serial.print((millis()-millis_buf));//1ループの具体的処理の末尾時間はここで出す
   // Serial.print("ms");
@@ -713,6 +681,7 @@ void loop() {
   //1ループはdefine MAINLOOP_CYCLE_MSの時間で出しておく
   //現在時刻-ループ頭がMAINLOOP_CYCLE_MSを超えるまで待機
   while ((millis() - millis_buf) < MAINLOOP_CYCLE_MS){}
+
   // Serial.print((millis()-millis_buf));//1ループ全体の時間チェック用
   // Serial.print("ms");
   // Serial.println();
