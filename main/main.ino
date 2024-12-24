@@ -710,34 +710,72 @@ unsigned long int BME280_calibration_Humidity(unsigned long int adc_H){
 }
 
 //BME280 値更新
+//センサ自体の更新レートは低いので，内部にカウンタを設けて更新を順繰りにする
 void BME280_getRawData(){
+  static uint8_t bme280_cnt=0;
   int i = 0;
-  uint32_t data[8];
-  unsigned long int buff[3];
+  static uint8_t bme280_data[3];
+  // uint32_t data[8];
+  // unsigned long int buff[3];
+  unsigned long int buff;
   signed long int temp_cal;
   unsigned long int press_cal,hum_cal;
+//   気圧の情報はレジスタのアドレス　0xF7 0xF8 0xF9に格納されます。
+// 温度の情報はレジスタのアドレス　0xFA 0xFB 0xFCに格納されます。
+// 湿度の情報はレジスタのアドレス　0xFD 0xFE に格納されます。　湿度だけ2byteです。
 
-  Wire.beginTransmission(ADDRESS_BME280);
-  Wire.write(0xF7);
-  Wire.endTransmission();
-  Wire.requestFrom(ADDRESS_BME280,8);
-  while(Wire.available()){
-      data[i] = Wire.read();
-      i++;
+  // Wire.beginTransmission(ADDRESS_BME280);
+  // Wire.write(0xF7);
+  // Wire.endTransmission();
+  // Wire.requestFrom(ADDRESS_BME280,8);
+  // while(Wire.available()){
+  //     data[i] = Wire.read();
+  //     i++;
+  // }
+
+  switch(bme280_cnt){
+    case 0:
+      Wire.beginTransmission(ADDRESS_BME280);
+      Wire.write(0xFA);
+      Wire.endTransmission();
+      Wire.requestFrom(ADDRESS_BME280,3);
+      Wire.readBytes(bme280_data, 3);
+      break;
+    case 1:
+      buff=(unsigned long int)((bme280_data[0] << 12) | (bme280_data[1] << 4) | (bme280_data[2] >> 4));
+      temp_cal  = BME280_calibration_Temperature(buff);
+      sensorsDataBuffer[TEMP]  = (double)temp_cal  /  100.0;
+      break;
+    case 2:
+      Wire.beginTransmission(ADDRESS_BME280);
+      Wire.write(0xF7);
+      Wire.endTransmission();
+      Wire.requestFrom(ADDRESS_BME280,3);
+      Wire.readBytes(bme280_data, 3);
+      break;
+    case 3:
+      buff=(unsigned long int)((bme280_data[0] << 12) | (bme280_data[1] << 4) | (bme280_data[2] >> 4));
+      press_cal = BME280_calibration_Pressure(buff);
+      sensorsDataBuffer[PRESS] = (double)press_cal /  100.0;
+      break;
+    case 4:
+      Wire.beginTransmission(ADDRESS_BME280);
+      Wire.write(0xFD);
+      Wire.endTransmission();
+      Wire.requestFrom(ADDRESS_BME280,2);
+      Wire.readBytes(bme280_data, 2);
+      break;
+    case 5:
+      buff=(unsigned long int)((bme280_data[0] << 8) | bme280_data[1]);
+      hum_cal   = BME280_calibration_Humidity(buff);
+      sensorsDataBuffer[HUMID] = (double)hum_cal / 1024.0;
+      break;
   }
 
-  buff[0]=(unsigned long int)((data[3] << 12) | (data[4] << 4) | (data[5] >> 4));
-  buff[1]=(unsigned long int)((data[0] << 12) | (data[1] << 4) | (data[2] >> 4));
-  buff[2]=(unsigned long int)((data[6] << 8) | data[7]);
-
-  temp_cal  = BME280_calibration_Temperature(buff[0]);
-  press_cal = BME280_calibration_Pressure(buff[1]);
-  hum_cal   = BME280_calibration_Humidity(buff[2]);
-
-  sensorsDataBuffer[TEMP]  = (double)temp_cal  /  100.0;
-  sensorsDataBuffer[PRESS] = (double)press_cal /  100.0;
-  sensorsDataBuffer[HUMID] = (double)hum_cal   / 1024.0;
-
+  bme280_cnt++;
+  if(bme280_cnt>=6){
+    bme280_cnt=0;
+  }
   return;
 }
 
@@ -887,7 +925,7 @@ void loop() {
 
   //1ループはdefine MAINLOOP_CYCLE_MSの時間で出しておく
   //現在時刻-ループ頭がMAINLOOP_CYCLE_MSを超えるまで待機
-  while ((millis() - millis_buf) < MAINLOOP_CYCLE_MS){}
+  while ((millis() - millis_buf) < (MAINLOOP_CYCLE_MS)){}
 
   // Serial.print((millis()-millis_buf));//1ループ全体の時間チェック用
   // Serial.print("ms");
