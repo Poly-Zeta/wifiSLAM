@@ -806,6 +806,15 @@ void setup() {
   // Serial.print("setup start");
   // Serial.println();
 
+  //BlinkMの光を弱くしておく
+  Wire.beginTransmission(ADDRESS_BlinkM);
+  Wire.write(0x6f);
+  Wire.write(0x6e);
+  Wire.write(0x04);
+  Wire.write(0x04);
+  Wire.write(0x04);
+  Wire.endTransmission();
+
   // Serial.print("SSD1306 setup");
   // Serial.println();
   SSD1306_Init(); //OLED ssd1306 初期化
