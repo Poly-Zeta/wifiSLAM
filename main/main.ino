@@ -148,7 +148,7 @@ const uint8_t fonts[FONTDATA_SIZE][SSD1306_CHARLINEDATA_SIZE]={
 
 void BlinkM_setColor(uint8_t red,uint8_t green,uint8_t blue){
   Wire.beginTransmission(ADDRESS_BlinkM);// join I2C, talk to BlinkM 0x09  
-  Wire.write('');
+  Wire.write('n');
   Wire.write(red); // value for red channel  
   Wire.write(blue); // value for blue channel  
   Wire.write(green); // value for green channel  
@@ -157,7 +157,7 @@ void BlinkM_setColor(uint8_t red,uint8_t green,uint8_t blue){
 
 void beginI2CTransmission(uint8_t address){
   BlinkM_setColor(0xff,0xff,0x00);
-  beginI2CTransmission(address);
+  Wire.beginTransmission(address);
   return;
 }
 
