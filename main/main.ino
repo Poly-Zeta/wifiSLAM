@@ -13,7 +13,29 @@
 #define SENSORS 23
 #define SENSORS_DISPLAY_OFFSET 12
 
-enum Sensors{
+const uint8_t ADDRESS_SSD1306 =  0x3C;
+const uint8_t ADDRESS_BNO055  =  0x28;
+const uint8_t ADDRESS_BME280  =  0x76;
+const uint8_t ADDRESS_WHEELS  =  0x34;
+const uint8_t ADDRESS_BlinkM  =  0x09;
+const uint8_t ADDRESS_PCA9685  =  0x40;
+const uint8_t ADDRESS_ADC1115  =  0x00;//配線中
+
+const uint8_t REG_BNO055_ACC   =  0x08;
+const uint8_t REG_BNO055_MAG   =  0x0E;
+const uint8_t REG_BNO055_GYRO  =  0x14;
+const uint8_t REG_BNO055_QUA   =  0x20;
+const uint8_t REG_BNO055_LIA   =  0x28;
+const uint8_t ADDRESS_ADS1115  =  0x28;
+
+//センサデータ置き場
+double sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+uint16_t I2CActiveFlags=0b0000000000000000;
+
+const uint8_t sensorsAddress
+
+enum SensorsBufferNUM{
   GYRO_X,
   GYRO_Y,
   GYRO_Z,
@@ -38,19 +60,16 @@ enum Sensors{
   A_IN0,
   A_IN1
 };
-Sensors sensors;
 
-const uint8_t ADDRESS_SSD1306 =  0x3C;
-const uint8_t ADDRESS_BNO055  =  0x28;
-
-const uint8_t REG_BNO055_ACC   =  0x08;
-const uint8_t REG_BNO055_MAG   =  0x0E;
-const uint8_t REG_BNO055_GYRO  =  0x14;
-const uint8_t REG_BNO055_QUA   =  0x20;
-const uint8_t REG_BNO055_LIA   =  0x28;
-
-//センサデータ置き場
-double sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+enum I2CSensorsNUM{
+  IMU_BNO055,
+  DISP_SSD1306,
+  HUM_BME280,
+  WHEELS,
+  LED_BlinkM,
+  SERVO_PCA9685,
+  ADC_ADS1115
+}
 
 //ディスプレイ描画バッファ
 uint8_t ssd1306_displayBuffer[SSD1306_PAGES_SIZE][SSD1306_CHARS_SIZE]={
