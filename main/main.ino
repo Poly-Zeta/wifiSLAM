@@ -724,36 +724,9 @@ void BME280_getRawData(){
   signed long int temp_cal;
   unsigned long int press_cal,hum_cal;
 
-  Wire.beginTransmission(ADDRESS_BME280);
-  Wire.write(0xF7);
-  Wire.endTransmission();
-  Wire.requestFrom(ADDRESS_BME280,8);
-  Wire.readBytes(data, 8);
-
-  buff[0]=(unsigned long int)((data[3] << 12) | (data[4] << 4) | (data[5] >> 4));
-  buff[1]=(unsigned long int)((data[0] << 12) | (data[1] << 4) | (data[2] >> 4));
-  buff[2]=(unsigned long int)((data[6] << 8) | data[7]);
-
-  temp_cal  = BME280_calibration_Temperature(buff[0]);
-  press_cal = BME280_calibration_Pressure(buff[1]);
-  hum_cal   = BME280_calibration_Humidity(buff[2]);
-
-  sensorsDataBuffer[TEMP]  = (double)temp_cal  /  100.0;
-  sensorsDataBuffer[PRESS] = (double)press_cal /  100.0;
-  sensorsDataBuffer[HUMID] = (double)hum_cal   / 1024.0;
-
 //   気圧の情報はレジスタのアドレス　0xF7 0xF8 0xF9に格納されます。
 // 温度の情報はレジスタのアドレス　0xFA 0xFB 0xFCに格納されます。
 // 湿度の情報はレジスタのアドレス　0xFD 0xFE に格納されます。　湿度だけ2byteです。
-
-  // Wire.beginTransmission(ADDRESS_BME280);
-  // Wire.write(0xF7);
-  // Wire.endTransmission();
-  // Wire.requestFrom(ADDRESS_BME280,8);
-  // while(Wire.available()){
-  //     data[i] = Wire.read();
-  //     i++;
-  // }
 
   switch(bme280_cnt){
     case 0:
