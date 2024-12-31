@@ -13,6 +13,9 @@
 #define SENSORS 23
 #define SENSORS_DISPLAY_OFFSET 12
 
+TaskHandle_t thp[1];//マルチスレッドのタスクハンドル格納用
+const uint8_t delay_th=MAINLOOP_CYCLE_MS-2;
+
 const uint8_t ADDRESS_SSD1306 =  0x3C;
 const uint8_t ADDRESS_BNO055  =  0x28;
 const uint8_t ADDRESS_BME280  =  0x76;
@@ -712,7 +715,7 @@ unsigned long int BME280_calibration_Humidity(unsigned long int adc_H){
 //BME280 値更新
 void BME280_getRawData(){
   int i = 0;
-  uint32_t data[8];
+  uint8_t data[8];
   unsigned long int buff[3];
   signed long int temp_cal;
   unsigned long int press_cal,hum_cal;
@@ -721,10 +724,7 @@ void BME280_getRawData(){
   Wire.write(0xF7);
   Wire.endTransmission();
   Wire.requestFrom(ADDRESS_BME280,8);
-  while(Wire.available()){
-      data[i] = Wire.read();
-      i++;
-  }
+  Wire.readBytes(data, 8);
 
   buff[0]=(unsigned long int)((data[3] << 12) | (data[4] << 4) | (data[5] >> 4));
   buff[1]=(unsigned long int)((data[0] << 12) | (data[1] << 4) | (data[2] >> 4));
@@ -789,7 +789,7 @@ void SerialOutput(){
   Serial.print(sensorsDataBuffer[HUMID]);
   Serial.print(",");
   Serial.print(sensorsDataBuffer[PRESS]);
-  Serial.print(",");
+  // Serial.print(",");
 
   // Serial.print("2000,-2000");
   Serial.println();
@@ -799,12 +799,10 @@ void SerialOutput(){
 
 void setup() {
   Wire.begin();
-  Wire.setClock(400000);
+  Wire.setClock(400000L);
   delay(10);
 
-  Serial.begin(115200);
-  // Serial.print("setup start");
-  // Serial.println();
+  // Serial.begin(115200);
 
   //BlinkMの光を弱くしておく
   Wire.beginTransmission(ADDRESS_BlinkM);
@@ -815,20 +813,15 @@ void setup() {
   Wire.write(0x04);
   Wire.endTransmission();
 
-  // Serial.print("SSD1306 setup");
-  // Serial.println();
   SSD1306_Init(); //OLED ssd1306 初期化
   
-  // Serial.print("SSD1306 cleanup");
-  // Serial.println();
   SSD1306_ClearAll();
   delay(300);
   SSD1306_FullFillSample();
   delay(300);
   SSD1306_ClearAll();
   delay(300);
-  // Serial.print("SSD1306 set end");
-  // Serial.println();
+
   SSD1306_display1LineWithShiftUp("INIT START");
   delay(300);
   SSD1306_display1LineWithShiftUp("SSD1306 SETUP");
@@ -849,8 +842,6 @@ void setup() {
   // SSD1306_display1LineWithShiftUp("BME280 SKIP");
   delay(300);
 
-  // Serial.print("setup end");
-  // Serial.println();
   SSD1306_display1LineWithShiftUp("SETUP COMPLETE");
   delay(1000);
   SSD1306_display1LineWithShiftUp("READY");
@@ -864,6 +855,8 @@ void setup() {
   SSD1306_display1LineWithShiftUp("R-WHEEL 00000");
   SSD1306_display1LineWithShiftUp("---------------");
   SSD1306_display1LineWithShiftUp("---------------");
+
+  xTaskCreatePinnedToCore(Core0, "Core0", 8192, NULL, 3, &thp[0], 0); 
 }
 
 void loop() {
@@ -875,8 +868,8 @@ void loop() {
   //温度計の値更新
   BME280_getRawData();
 
-  //センサデータのシリアル出力
-  SerialOutput();
+  // //センサデータのシリアル出力
+  // SerialOutput();
 
   //センサデータのディスプレイ表示
   SSD1306_displaySensorsData();
@@ -887,9 +880,34 @@ void loop() {
 
   //1ループはdefine MAINLOOP_CYCLE_MSの時間で出しておく
   //現在時刻-ループ頭がMAINLOOP_CYCLE_MSを超えるまで待機
+  // delay(1);
+  int est_clk_c1=millis()-millis_buf;
+  if((est_clk_c1)<=delay_th){
+    delay(delay_th-est_clk_c1);
+  }
   while ((millis() - millis_buf) < MAINLOOP_CYCLE_MS){}
 
   // Serial.print((millis()-millis_buf));//1ループ全体の時間チェック用
   // Serial.print("ms");
   // Serial.println();
+}
+
+
+//115200bps / 10bit/char / 1000ms(1sec) *9ms =103.68char/s -> 10msサイクルだと足りてない
+void Core0(void *args) {
+  Serial.begin(115200);
+  unsigned long millis_buf_c0;
+  int est_clk_c0;
+  while (1) {
+    millis_buf_c0 = millis();
+    //センサデータのシリアル出力
+    SerialOutput();
+
+    // delay(1);
+    est_clk_c0=millis()-millis_buf_c0;
+    if((est_clk_c0)<=delay_th){
+      delay(delay_th-est_clk_c0);
+    }
+    while ((millis() - millis_buf_c0) < MAINLOOP_CYCLE_MS){}
+  }
 }
