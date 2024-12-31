@@ -31,8 +31,21 @@ const uint8_t REG_BNO055_QUA   =  0x20;
 const uint8_t REG_BNO055_LIA   =  0x28;
 const uint8_t ADDRESS_ADS1115  =  0x28;
 
+const uint8_t  ADC_BAT_ADDR =0x00;
+const uint8_t  MOTOR_TYPE_ADDR =0x14;
+const uint8_t  MOTOR_ENCODER_POLARITY_ADDR =0x15;
+const uint8_t  MOTOR_ENCODER_POLARITY =0x00;
+const uint8_t  MOTOR_FIXED_PWM_ADDR =0x1F;
+const uint8_t  MOTOR_FIXED_SPEED_ADDR =0x33;
+const uint8_t  MOTOR_ENCODER_TOTAL_ADDR =0x3C;
+const uint8_t  MOTOR_TYPE_WITHOUT_ENCODER =0x00;
+const uint8_t  MOTOR_TYPE_TT =0x01;
+const uint8_t  MOTOR_TYPE_N20 =0x02;
+const uint8_t  MOTOR_TYPE_JGB37_520_12V_110RPM =0x03;
+
 //センサデータ置き場
 double sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int32_t EncodeTotal[4]={0,0,0,0};
 
 uint16_t I2CActiveFlags=0b0000000000000000;
 
@@ -204,6 +217,30 @@ void SSD1306_displaySensorsData(){
       updateChar=6;
       updateSize=7;
       break;
+    case  L_WHEEL:
+      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
+      updatePage=4;
+      updateChar=8;
+      updateSize=5;
+      break;
+    case R_WHEEL:
+      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
+      updatePage=5;
+      updateChar=8;
+      updateSize=5;
+      break;
+    case A_IN0://serialreadのデバッグのため，シリアルで入ってきた変数をここに表示
+      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
+      updatePage=6;
+      updateChar=3;
+      updateSize=10;
+      break;
+    case A_IN1://serialreadのデバッグのため，シリアルで入ってきた変数をここに表示
+      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
+      updatePage=7;
+      updateChar=3;
+      updateSize=10;
+      break;
   }
 
   // }else if(cnt==1){//lwh
@@ -245,7 +282,7 @@ void SSD1306_displaySensorsData(){
   }
 
   cnt++;
-  if(cnt>=SENSORS_DISPLAY_OFFSET+7){//SENSORS){
+  if(cnt>=SENSORS_DISPLAY_OFFSET+11){//SENSORS){
     cnt=SENSORS_DISPLAY_OFFSET;
   }
   // Serial.print("next cnt:");
@@ -822,6 +859,11 @@ void SerialOutput(){
   Serial.print(sensorsDataBuffer[HUMID]);
   Serial.print(",");
   Serial.print(sensorsDataBuffer[PRESS]);
+  Serial.print(",");
+
+  Serial.print(sensorsDataBuffer[L_WHEEL]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[R_WHEEL]);
   // Serial.print(",");
 
   // Serial.print("2000,-2000");
@@ -830,12 +872,61 @@ void SerialOutput(){
   return;
 }
 
+void MotorDriver_Init(){
+  Wire.beginTransmission(ADDRESS_WHEELS);
+  Wire.write(MOTOR_TYPE_ADDR);
+  Wire.write(MOTOR_TYPE_JGB37_520_12V_110RPM);
+  Wire.endTransmission();
+  delay(5);
+  
+  Wire.beginTransmission(ADDRESS_WHEELS);
+  Wire.write(MOTOR_ENCODER_POLARITY_ADDR);
+  Wire.write(MOTOR_ENCODER_POLARITY);
+  Wire.endTransmission();
+  delay(5);
+
+  Wire.beginTransmission(ADDRESS_WHEELS);
+  Wire.write(MOTOR_ENCODER_TOTAL_ADDR);
+  for(int i = 0; i < 8; i++){
+    Wire.write(0x00);
+  }
+  Wire.endTransmission();
+  delay(5);
+  return;
+}
+
+void WriteMotors(int8_t l_wheelPower,int8_t r_wheelPower){
+  Wire.beginTransmission(ADDRESS_WHEELS);
+  Wire.write(MOTOR_FIXED_SPEED_ADDR);
+  Wire.write(l_wheelPower);
+  Wire.write(r_wheelPower);
+  Wire.write(0x00);
+  Wire.write(0x00);
+  Wire.endTransmission();
+  return;
+}
+
+void readEncoders(){
+  uint32_t buffer[2];
+
+  Wire.beginTransmission(ADDRESS_WHEELS);
+  Wire.write(MOTOR_ENCODER_TOTAL_ADDR);
+  Wire.endTransmission();
+  Wire.requestFrom(ADDRESS_WHEELS, 8);
+    Wire.readBytes((uint8_t*)buffer, 8);
+  Wire.endTransmission();
+
+  sensorsDataBuffer[L_WHEEL]=(double)buffer[0];
+  sensorsDataBuffer[R_WHEEL]=(double)buffer[1];
+
+  return;
+}
+
 void setup() {
+  Serial.begin(230400);
   Wire.begin();
   Wire.setClock(400000L);
   delay(10);
-
-  // Serial.begin(115200);
 
   //BlinkMの光を弱くしておく
   Wire.beginTransmission(ADDRESS_BlinkM);
@@ -857,22 +948,27 @@ void setup() {
 
   SSD1306_display1LineWithShiftUp("INIT START");
   delay(300);
-  SSD1306_display1LineWithShiftUp("SSD1306 SETUP");
+  SSD1306_display1LineWithShiftUp("SSD1306 SETUP");//oled SSD1306初期化演出
   delay(100);
   SSD1306_display1LineWithShiftUp("SSD1306 STANDBY");
+  delay(300);
+  SSD1306_display1LineWithShiftUp("BLINKM SETUP");//BlinkM初期化演出
+  delay(100);
+  SSD1306_display1LineWithShiftUp("BLINKM STANDBY");
 
 
 
   SSD1306_display1LineWithShiftUp("BNO055 SETUP");//IMU BNO055初期化
   BNO055_Init();
   SSD1306_display1LineWithShiftUp("BNO055 STANDBY");
-  // SSD1306_display1LineWithShiftUp("BNO055 SKIP");
 
-
-  SSD1306_display1LineWithShiftUp("BME280 SETUP");
+  SSD1306_display1LineWithShiftUp("BME280 SETUP");//温度計 BME280初期化
   BME280_Init();
   SSD1306_display1LineWithShiftUp("BME280 STANDBY");
-  // SSD1306_display1LineWithShiftUp("BME280 SKIP");
+
+  SSD1306_display1LineWithShiftUp("MOTOR SETUP");//モータドライバ初期化
+  // MotorDriver_Init();
+  SSD1306_display1LineWithShiftUp("MOTOR STANDBY");
   delay(300);
 
   SSD1306_display1LineWithShiftUp("SETUP COMPLETE");
@@ -886,8 +982,8 @@ void setup() {
   SSD1306_display1LineWithShiftUp("PRESS 1000.00");
   SSD1306_display1LineWithShiftUp("L-WHEEL 00000");
   SSD1306_display1LineWithShiftUp("R-WHEEL 00000");
-  SSD1306_display1LineWithShiftUp("---------------");
-  SSD1306_display1LineWithShiftUp("---------------");
+  SSD1306_display1LineWithShiftUp("A-0 0000000000");
+  SSD1306_display1LineWithShiftUp("A-1 0000000000");
 
   xTaskCreatePinnedToCore(Core0, "Core0", 8192, NULL, 3, &thp[0], 0); 
 }
@@ -903,6 +999,31 @@ void loop() {
 
   // //センサデータのシリアル出力
   // SerialOutput();
+
+  //ホイールエンコーダの読み出し
+  // readEncoders();
+
+  if (Serial.available() > 0) {
+    String receivedData = Serial.readStringUntil('\n'); // 改行までのデータを読み込む
+
+    //分解
+    int commaIndex = receivedData.indexOf(',');
+    float linear_x,angular_z;
+
+    if (commaIndex != -1) {
+      String linearXStr = receivedData.substring(0, commaIndex);
+      String angularZStr = receivedData.substring(commaIndex + 1);
+      
+      linear_x = linearXStr.toFloat();   // 文字列を浮動小数点数に変換
+      angular_z = angularZStr.toFloat();
+      
+      //書き出し
+      //一時的に書き出し先をセンサデータのバッファにして
+      //シリアル入力をoledで確認できるようにしておく
+      sensorsDataBuffer[A_IN0]=linear_x;
+      sensorsDataBuffer[A_IN1]=angular_z;
+    }
+  }
 
   //センサデータのディスプレイ表示
   SSD1306_displaySensorsData();
@@ -931,7 +1052,6 @@ void loop() {
 //伝送レート2倍にした
 void Core0(void *args) {
   // Serial.begin(115200);
-  Serial.begin(230400);
   unsigned long millis_buf_c0;
   int est_clk_c0;
   while (1) {
