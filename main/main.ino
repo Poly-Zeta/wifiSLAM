@@ -55,29 +55,29 @@ int16_t dig_T2,dig_T3,dig_P2,dig_P3,dig_P4,dig_P5,dig_P6,dig_P7,dig_P8,dig_P9,di
 int8_t  dig_H1,dig_H3,dig_H6;
 
 enum SensorsBufferNUM{
-  GYRO_X,
-  GYRO_Y,
-  GYRO_Z,
-  MAG_X,
-  MAG_Y,
-  MAG_Z,
-  ACC_X,
-  ACC_Y,
-  ACC_Z,
-  LACC_X,
-  LACC_Y,
-  LACC_Z,
-  QW,
-  QX,
-  QY,
-  QZ,
-  HUMID,
-  TEMP,
-  PRESS,
-  L_WHEEL,
-  R_WHEEL,
-  A_IN0,
-  A_IN1
+  GYRO_X, //0
+  GYRO_Y, //1
+  GYRO_Z, //2
+  MAG_X,  //3
+  MAG_Y,  //4
+  MAG_Z,  //5
+  ACC_X,  //6
+  ACC_Y,  //7
+  ACC_Z,  //8
+  LACC_X, //9
+  LACC_Y, //10
+  LACC_Z, //11
+  QW,     //12
+  QX,     //13
+  QY,     //14
+  QZ,     //15
+  HUMID,  //16
+  TEMP,   //17
+  PRESS,  //18
+  L_WHEEL,//19
+  R_WHEEL,//20
+  A_IN0,  //21
+  A_IN1   //22
 };
 
 enum I2CSensorsNUM{
@@ -218,36 +218,30 @@ void SSD1306_displaySensorsData(){
       updateSize=7;
       break;
     case  L_WHEEL:
-      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
+      dtostrf(sensorsDataBuffer[cnt],5,0,buf);
       updatePage=4;
       updateChar=8;
       updateSize=5;
       break;
     case R_WHEEL:
-      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
+      dtostrf(sensorsDataBuffer[cnt],5,0,buf);
       updatePage=5;
       updateChar=8;
       updateSize=5;
       break;
     case A_IN0://serialreadのデバッグのため，シリアルで入ってきた変数をここに表示
-      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
+      dtostrf(sensorsDataBuffer[cnt],10,2,buf);
       updatePage=6;
       updateChar=3;
       updateSize=10;
       break;
     case A_IN1://serialreadのデバッグのため，シリアルで入ってきた変数をここに表示
-      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
+      dtostrf(sensorsDataBuffer[cnt],10,2,buf);
       updatePage=7;
       updateChar=3;
       updateSize=10;
       break;
   }
-
-  // }else if(cnt==1){//lwh
-
-  // }else if(cnt==1){//rwh
-
-  // }
   
   for(uint8_t chars=0;chars<updateSize;chars++){
     ssd1306_displayBuffer[updatePage][updateChar+chars]=(uint8_t)buf[chars];
