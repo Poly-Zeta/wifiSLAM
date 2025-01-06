@@ -16,11 +16,11 @@
 TaskHandle_t thp[1];//マルチスレッドのタスクハンドル格納用
 const uint8_t delay_th=MAINLOOP_CYCLE_MS-2;
 
-const uint8_t ADDRESS_SSD1306 =  0x3C;
-const uint8_t ADDRESS_BNO055  =  0x28;
-const uint8_t ADDRESS_BME280  =  0x76;
-const uint8_t ADDRESS_WHEELS  =  0x34;
-const uint8_t ADDRESS_BlinkM  =  0x09;
+const uint8_t ADDRESS_SSD1306  =  0x3C;
+const uint8_t ADDRESS_BNO055   =  0x28;
+const uint8_t ADDRESS_BME280   =  0x76;
+const uint8_t ADDRESS_WHEELS   =  0x34;
+const uint8_t ADDRESS_BlinkM   =  0x09;
 const uint8_t ADDRESS_PCA9685  =  0x40;
 const uint8_t ADDRESS_ADC1115  =  0x00;//配線中
 
@@ -31,17 +31,17 @@ const uint8_t REG_BNO055_QUA   =  0x20;
 const uint8_t REG_BNO055_LIA   =  0x28;
 const uint8_t ADDRESS_ADS1115  =  0x28;
 
-const uint8_t  ADC_BAT_ADDR =0x00;
-const uint8_t  MOTOR_TYPE_ADDR =0x14;
-const uint8_t  MOTOR_ENCODER_POLARITY_ADDR =0x15;
-const uint8_t  MOTOR_ENCODER_POLARITY =0x00;
-const uint8_t  MOTOR_FIXED_PWM_ADDR =0x1F;
-const uint8_t  MOTOR_FIXED_SPEED_ADDR =0x33;
-const uint8_t  MOTOR_ENCODER_TOTAL_ADDR =0x3C;
-const uint8_t  MOTOR_TYPE_WITHOUT_ENCODER =0x00;
-const uint8_t  MOTOR_TYPE_TT =0x01;
-const uint8_t  MOTOR_TYPE_N20 =0x02;
-const uint8_t  MOTOR_TYPE_JGB37_520_12V_110RPM =0x03;
+const uint8_t ADC_BAT_ADDR                    = 0x00;
+const uint8_t MOTOR_TYPE_ADDR                 = 0x14;
+const uint8_t MOTOR_ENCODER_POLARITY_ADDR     = 0x15;
+const uint8_t MOTOR_ENCODER_POLARITY          = 0x00;
+const uint8_t MOTOR_FIXED_PWM_ADDR            = 0x1F;
+const uint8_t MOTOR_FIXED_SPEED_ADDR          = 0x33;
+const uint8_t MOTOR_ENCODER_TOTAL_ADDR        = 0x3C;
+const uint8_t MOTOR_TYPE_WITHOUT_ENCODER      = 0x00;
+const uint8_t MOTOR_TYPE_TT                   = 0x01;
+const uint8_t MOTOR_TYPE_N20                  = 0x02;
+const uint8_t MOTOR_TYPE_JGB37_520_12V_110RPM = 0x03;
 
 //センサデータ置き場
 double sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -86,8 +86,8 @@ enum I2CSensorsNUM{
   HUM_BME280,
   WHEELS,
   LED_BlinkM,
-  SERVO_PCA9685,
-  ADC_ADS1115
+  ADC_ADS1115,
+  SERVO_PCA9685
 };
 
 //ディスプレイ描画バッファ
@@ -169,79 +169,32 @@ const uint8_t fonts[FONTDATA_SIZE][SSD1306_CHARLINEDATA_SIZE]={
 void SSD1306_displaySensorsData(){
   static uint8_t cnt=SENSORS_DISPLAY_OFFSET;
 
-  uint8_t updatePage,updateChar,updateSize;
+  uint8_t updatePage,updateChar,updateSize,dtostrfSize;
+
+  const uint8_t updateStatus[11][4]={
+    //updatePage,updateChar,updateSize,dtostrfSize
+    {0, 2, 5,2},//QW
+    {0,10, 5,2},//QX
+    {1, 2, 5,2},//QY
+    {1,10, 5,2},//QZ
+    {2, 2, 5,1},//HUMID
+    {2,10, 5,1},//TEMP
+    {3, 6, 7,2},//PRESS
+    {4, 8, 5,0},//L_WHEEL
+    {5, 8, 5,0},//R_WHEEL
+    {6, 3,10,2},//A_IN0
+    {7, 3,10,2} //A_IN1
+  };
+  //A_INについては，serialreadのデバッグのためにシリアルで入ってきた変数を表示させておく
 
   char buf[SSD1306_CHARS_SIZE];
 
-  //択が多いためswitch-caseに置換
-  switch(cnt){
-    case QW:
-      dtostrf(sensorsDataBuffer[cnt],5,2,buf);
-      updatePage=0;
-      updateChar=2;
-      updateSize=5;
-      break;
-    case QX:
-      dtostrf(sensorsDataBuffer[cnt],5,2,buf);
-      updatePage=0;
-      updateChar=10;
-      updateSize=5;
-      break;
-    case QY:
-      dtostrf(sensorsDataBuffer[cnt],5,2,buf);
-      updatePage=1;
-      updateChar=2;
-      updateSize=5;
-      break;
-    case QZ:
-      dtostrf(sensorsDataBuffer[cnt],5,2,buf);
-      updatePage=1;
-      updateChar=10;
-      updateSize=5;
-      break;
-    case HUMID:
-      dtostrf(sensorsDataBuffer[cnt],5,1,buf);
-      updatePage=2;
-      updateChar=2;
-      updateSize=5;
-      break;
-    case TEMP:
-      dtostrf(sensorsDataBuffer[cnt],5,1,buf);
-      updatePage=2;
-      updateChar=10;
-      updateSize=5;
-      break;
-    case PRESS:
-      dtostrf(sensorsDataBuffer[cnt],7,2,buf);
-      updatePage=3;
-      updateChar=6;
-      updateSize=7;
-      break;
-    case  L_WHEEL:
-      dtostrf(sensorsDataBuffer[cnt],5,0,buf);
-      updatePage=4;
-      updateChar=8;
-      updateSize=5;
-      break;
-    case R_WHEEL:
-      dtostrf(sensorsDataBuffer[cnt],5,0,buf);
-      updatePage=5;
-      updateChar=8;
-      updateSize=5;
-      break;
-    case A_IN0://serialreadのデバッグのため，シリアルで入ってきた変数をここに表示
-      dtostrf(sensorsDataBuffer[cnt],10,2,buf);
-      updatePage=6;
-      updateChar=3;
-      updateSize=10;
-      break;
-    case A_IN1://serialreadのデバッグのため，シリアルで入ってきた変数をここに表示
-      dtostrf(sensorsDataBuffer[cnt],10,2,buf);
-      updatePage=7;
-      updateChar=3;
-      updateSize=10;
-      break;
-  }
+  updatePage=updateStatus[cnt-SENSORS_DISPLAY_OFFSET][0];
+  updateChar=updateStatus[cnt-SENSORS_DISPLAY_OFFSET][1];
+  updateSize=updateStatus[cnt-SENSORS_DISPLAY_OFFSET][2];
+  dtostrfSize=updateStatus[cnt-SENSORS_DISPLAY_OFFSET][3];
+
+  dtostrf(sensorsDataBuffer[cnt],updateSize,dtostrfSize,buf);
   
   for(uint8_t chars=0;chars<updateSize;chars++){
     ssd1306_displayBuffer[updatePage][updateChar+chars]=(uint8_t)buf[chars];
@@ -614,16 +567,97 @@ void BNO055_Init(){
 
     //NDOF(全センサ有効，自動キャリブレーション，自動フュージョンモード)で起動
     BNO055_Write(0x3d, 0x0c,   80);   //operating mode = ndof
+    
+    //IMU(加速度とジャイロ，自動キャリブレーション，自動フュージョンモード)で起動
+    // BNO055_Write(0x3d, 0x08,   80);
+  }
+  return;
+}
+
+//BNO055のキャリブレーション
+void BNO055_Calibration(){
+  uint8_t buffer[6];
+  const uint8_t REG_BNO055_CALIBRATED=0x35;
+
+  buffer[0] = 0b00000000;
+
+  SSD1306_display1LineWithShiftUp("CALIBRATION...");
+  SSD1306_display1LineWithShiftUp("GYRO 0 ACC 0");
+
+  while((buffer[0] & 0b00111100) != 0b00111100){
+    unsigned long millis_buf = millis();
+    Wire.beginTransmission(ADDRESS_BNO055);  
+    Wire.write(0x35);
+    Wire.endTransmission(false);
+    Wire.requestFrom(ADDRESS_BNO055, 1);
+    Wire.readBytes(buffer, 1);
+
+    uint8_t GYRO_calib= (buffer[0] & 0b00110000)>>4;
+    uint8_t ACC_calib = (buffer[0] & 0b00001100)>>2;
+    ssd1306_displayBuffer[7][5]  = GYRO_calib | 0x30;
+    ssd1306_displayBuffer[7][11] =  ACC_calib | 0x30;
+
+    // Serial.print(ssd1306_displayBuffer[7][5],HEX);
+    // Serial.print(",");
+    // Serial.print(ssd1306_displayBuffer[7][11],HEX);
+    // Serial.println();
+
+    Wire.beginTransmission(ADDRESS_SSD1306);
+    //ページ指定
+    Wire.write(0b10000000); //control byte, Co bit = 1 (1byte only), D/C# = 0 (command)
+      Wire.write(0xB0 | 7); //set page start address(B0～B7)
+    //表示更新幅指定っぽい
+    Wire.write(0b00000000);
+      Wire.write(0x21); //set Column Address
+        Wire.write(8*5); //Column Start Address(0-127)
+        Wire.write(8*(5+1)); //Column Stop Address(0-127)
+    Wire.endTransmission();
+
+    Wire.beginTransmission(ADDRESS_SSD1306);
+    Wire.write(0b01000000); //control byte, Co bit = 0 (continue), D/C# = 1 (data) Max=31byte
+
+    for(uint8_t cntByteLine=0;cntByteLine<SSD1306_CHARLINEDATA_SIZE;cntByteLine++){
+      Wire.write(fonts[ssd1306_displayBuffer[7][5]-FONTDATA_OFFSET][cntByteLine]);
+    }
+    Wire.endTransmission();
+    
+    Wire.beginTransmission(ADDRESS_SSD1306);
+    Wire.write(0b10000000); //control byte, Co bit = 1 (1byte only), D/C# = 0 (command)
+      Wire.write(0xB0 | 7);
+     Wire.write(0b00000000);
+      Wire.write(0x21); //set Column Address
+        Wire.write(8*11); //Column Start Address(0-127)
+        Wire.write(8*(11+1)); //Column Stop Address(0-127)
+    Wire.endTransmission();
+
+    Wire.beginTransmission(ADDRESS_SSD1306);
+    Wire.write(0b01000000); //control byte, Co bit = 0 (continue), D/C# = 1 (data) Max=31byte
+
+    for(uint8_t cntByteLine=0;cntByteLine<SSD1306_CHARLINEDATA_SIZE;cntByteLine++){
+      Wire.write(fonts[ssd1306_displayBuffer[7][11]-FONTDATA_OFFSET][cntByteLine]);
+    }
+    Wire.endTransmission();
+
+    while ((millis() - millis_buf) < MAINLOOP_CYCLE_MS){}
   }
 
-//Acc: m/s2
-//[UNIT_SEL] : xxxxxxx0b
+  Wire.beginTransmission(ADDRESS_BNO055);
+  Wire.write(0x00);
+  Wire.endTransmission();
 
-//Deg/s
-//[UNIT_SEL] : xxxxxx0xb
+  Wire.requestFrom(ADDRESS_BNO055, 1);
+  if(Wire.read() == 0xa0){
+    //設定
+    BNO055_Write(0x3d, 0x00,   80);   //operating mode = config mode
+    
+    //IMU(加速度とジャイロ，自動キャリブレーション，自動フュージョンモード)で起動
+    // BNO055_Write(0x3d, 0x08,   80);
 
-//オイラー角 deg
-//[UNIT_SEL] : xxxxx0xxb
+    //NDOF(全センサ有効，自動キャリブレーション，自動フュージョンモード)で起動
+    BNO055_Write(0x3d, 0x0c,   80);   //operating mode = ndof
+  }
+
+  SSD1306_display1LineWithShiftUp("DONE!");
   return;
 }
 
@@ -858,6 +892,7 @@ void SerialOutput(){
   Serial.print(sensorsDataBuffer[L_WHEEL]);
   Serial.print(",");
   Serial.print(sensorsDataBuffer[R_WHEEL]);
+
   // Serial.print(",");
 
   // Serial.print("2000,-2000");
@@ -919,7 +954,7 @@ void readEncoders(){
 void setup() {
   Serial.begin(230400);
   Wire.begin();
-  Wire.setClock(400000L);
+  Wire.setClock(100000L);
   delay(10);
 
   //BlinkMの光を弱くしておく
@@ -950,12 +985,6 @@ void setup() {
   delay(100);
   SSD1306_display1LineWithShiftUp("BLINKM STANDBY");
 
-
-
-  SSD1306_display1LineWithShiftUp("BNO055 SETUP");//IMU BNO055初期化
-  BNO055_Init();
-  SSD1306_display1LineWithShiftUp("BNO055 STANDBY");
-
   SSD1306_display1LineWithShiftUp("BME280 SETUP");//温度計 BME280初期化
   BME280_Init();
   SSD1306_display1LineWithShiftUp("BME280 STANDBY");
@@ -964,6 +993,11 @@ void setup() {
   // MotorDriver_Init();
   SSD1306_display1LineWithShiftUp("MOTOR STANDBY");
   delay(300);
+
+  SSD1306_display1LineWithShiftUp("BNO055 SETUP");//IMU BNO055初期化
+  BNO055_Init();
+  BNO055_Calibration();
+  SSD1306_display1LineWithShiftUp("BNO055 STANDBY");
 
   SSD1306_display1LineWithShiftUp("SETUP COMPLETE");
   delay(1000);
