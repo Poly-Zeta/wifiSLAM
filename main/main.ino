@@ -1,6 +1,10 @@
 #include "Wire.h"
 #include <Arduino.h>
 
+//TODO:各I2Cデバイスがアクティブかどうかの管理フラグの作成
+//->Init時にアクティブだった場合のみ，IOを実施(そのぶんのifぐらいはクロックが間に合うはず)
+//特にモタドラとBlinkは2層目基板にあるため外せるようにしておく
+
 #define MAINLOOP_CYCLE_MS 10
 
 #define SSD1306_PAGES_SIZE 8//0~7の8ページ(64pix/8pix)
@@ -990,7 +994,7 @@ void setup() {
   SSD1306_display1LineWithShiftUp("BME280 STANDBY");
 
   SSD1306_display1LineWithShiftUp("MOTOR SETUP");//モータドライバ初期化
-  // MotorDriver_Init();
+  MotorDriver_Init();
   SSD1306_display1LineWithShiftUp("MOTOR STANDBY");
   delay(300);
 
@@ -1026,15 +1030,15 @@ void loop() {
   BME280_getRawData();
 
   // //センサデータのシリアル出力
-  // SerialOutput();
+  // SerialOutput();//別コアに移行した
 
   //ホイールエンコーダの読み出し
-  // readEncoders();
+  readEncoders();
 
   if (Serial.available() > 0) {
     String receivedData = Serial.readStringUntil('\n'); // 改行までのデータを読み込む
 
-    //分解
+    //カンマで分解　分解できない場合は無視する
     int commaIndex = receivedData.indexOf(',');
     float linear_x,angular_z;
 
