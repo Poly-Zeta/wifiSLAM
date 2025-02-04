@@ -2,10 +2,9 @@
 #include <Arduino.h>
 #include "math.h"
 
-//TODO:各I2Cデバイスがアクティブかどうかの管理フラグの作成
-//->Init時にアクティブだった場合のみ，IOを実施(そのぶんのifぐらいはクロックが間に合うはず)
-//特にモタドラとBlinkは2層目基板にあるため外せるようにしておく
-//どっかでセンサ番号からセンサのI2Caddrを取得できるようにしておいたほうがいい
+//TODO:センサ番号からセンサのI2Caddrを取得できるようにしておいたほうがいい
+//シリアルは230400に戻して，以前のコード同様に情報減らしてでもとりあえず確認用の数値を出せるようにする
+//代わりに情報落ちてないセンサの生値はSPIから出したい
 
 #define MAINLOOP_CYCLE_MS 10
 
@@ -718,6 +717,7 @@ void BNO055_Calibration(){
 
 //温度センサ BME280 初期化
 void BME280_Init(){
+  delay(500);
   I2CConnectChk(ADDRESS_BME280,HUM_BME280);
   if(!I2CConnectFlgChk(HUM_BME280)){
     return;
@@ -910,7 +910,14 @@ void BME280_getRawData(){
 //float型のデータを1Byteずつ送信
 void SerialOutputFloat(float data){
   for(int i=0;i<4;i++){
-    Serial.print(((uint8_t*)&data)[i]);
+    Serial.write(((uint8_t*)&data)[i]);
+  }
+  return;
+}
+
+void SerialOutputUlong(unsigned long data){
+  for(int i=0;i<4;i++){
+    Serial.write(((uint8_t*)&data)[i]);
   }
   return;
 }
@@ -918,60 +925,58 @@ void SerialOutputFloat(float data){
 //センサ値のシリアル出力
 void SerialOutput(){
   //起動後時間，角速度，磁気，加速度，線形加速度，四元数，(温度，湿度，気圧，左モータ回転，右モータ回転)
-  Serial.print(millis());
-  Serial.print(",");
-
-  SerialOutputFloat(sensorsDataBuffer[GYRO_X]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[GYRO_Y]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[GYRO_Z]);
-  Serial.print(",");
-  
-  SerialOutputFloat(sensorsDataBuffer[MAG_X]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[MAG_Y]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[MAG_Z]);
-  Serial.print(",");
-  
-  SerialOutputFloat(sensorsDataBuffer[ACC_X]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[ACC_Y]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[ACC_Z]);
-  Serial.print(",");
-  
-  SerialOutputFloat(sensorsDataBuffer[LACC_X]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[LACC_Y]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[LACC_Z]);
-  Serial.print(",");
-  
-  SerialOutputFloat(sensorsDataBuffer[QW]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[QX]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[QY]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[QZ]);
-  Serial.print(",");
-  
-  SerialOutputFloat(sensorsDataBuffer[TEMP]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[HUMID]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[PRESS]);
-  Serial.print(",");
-
-  SerialOutputFloat(sensorsDataBuffer[L_WHEEL]);
-  Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[R_WHEEL]);
-
+  // Serial.print(millis());
+  SerialOutputUlong(millis());
   // Serial.print(",");
 
-  // Serial.print("2000,-2000");
+  SerialOutputFloat(sensorsDataBuffer[GYRO_X]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[GYRO_Y]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[GYRO_Z]);
+  // Serial.print(",");
+  
+  SerialOutputFloat(sensorsDataBuffer[MAG_X]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[MAG_Y]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[MAG_Z]);
+  // Serial.print(",");
+  
+  SerialOutputFloat(sensorsDataBuffer[ACC_X]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[ACC_Y]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[ACC_Z]);
+  // Serial.print(",");
+  
+  SerialOutputFloat(sensorsDataBuffer[LACC_X]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[LACC_Y]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[LACC_Z]);
+  // Serial.print(",");
+  
+  SerialOutputFloat(sensorsDataBuffer[QW]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[QX]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[QY]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[QZ]);
+  // Serial.print(",");
+  
+  SerialOutputFloat(sensorsDataBuffer[TEMP]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[HUMID]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[PRESS]);
+  // Serial.print(",");
+
+  SerialOutputFloat(sensorsDataBuffer[L_WHEEL]);
+  // Serial.print(",");
+  SerialOutputFloat(sensorsDataBuffer[R_WHEEL]);
+
   Serial.println();
 
   return;
@@ -1041,7 +1046,8 @@ void readEncoders(){
 }
 
 void setup() {
-  Serial.begin(230400);
+  // Serial.begin(230400);
+  Serial.begin(115200);
   Wire.begin();
   Wire.setClock(100000L);
   delay(10);
@@ -1137,12 +1143,37 @@ void loop() {
       
       linear_x = linearXStr.toFloat();   // 文字列を浮動小数点数に変換
       angular_z = angularZStr.toFloat();
+
+      int8_t l_wheelPower,r_wheelPower;
+      int8_t test_maxPow=-1*20;
+
+      if(linear_x==0){
+        if(angular_z==0){
+          l_wheelPower=0;
+          r_wheelPower=0;
+        }else{
+          l_wheelPower=test_maxPow*angular_z*-1;
+          r_wheelPower=test_maxPow*angular_z;
+        }
+      }else{
+        if(angular_z==0){
+          l_wheelPower=test_maxPow;
+          r_wheelPower=test_maxPow;
+        }else{
+          l_wheelPower=test_maxPow+test_maxPow*angular_z*0.8*-1;
+          r_wheelPower=test_maxPow+test_maxPow*angular_z*0.8;
+        }
+      }
+
+      WriteMotors(l_wheelPower,r_wheelPower);
       
       //書き出し
       //一時的に書き出し先をセンサデータのバッファにして
       //シリアル入力をoledで確認できるようにしておく
-      sensorsDataBuffer[A_IN0]=linear_x;
-      sensorsDataBuffer[A_IN1]=angular_z;
+      // sensorsDataBuffer[A_IN0]=linear_x;
+      // sensorsDataBuffer[A_IN1]=angular_z;
+      sensorsDataBuffer[A_IN0]=l_wheelPower;
+      sensorsDataBuffer[A_IN1]=r_wheelPower;
     }
   }
 
