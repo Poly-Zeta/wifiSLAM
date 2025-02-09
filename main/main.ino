@@ -3,8 +3,8 @@
 #include "math.h"
 
 //TODO:センサ番号からセンサのI2Caddrを取得できるようにしておいたほうがいい
-//シリアルは230400に戻して，以前のコード同様に情報減らしてでもとりあえず確認用の数値を出せるようにする
-//代わりに情報落ちてないセンサの生値はSPIから出したい
+
+#define I2C_DEV_ADDR 0x55
 
 #define MAINLOOP_CYCLE_MS 10
 
@@ -51,9 +51,12 @@ const uint8_t MOTOR_TYPE_JGB37_520_12V_110RPM = 0x03;
 //センサデータ置き場
 double sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int32_t EncodeTotal[4]={0,0,0,0};
-
 uint16_t I2CActiveFlags=0b0000000000000000;
 
+//Core0用
+unsigned long lastCalledClk=millis();
+
+//BME280用
 signed long int t_fine;
 uint16_t dig_T1,dig_P1;
 int16_t dig_T2,dig_T3,dig_P2,dig_P3,dig_P4,dig_P5,dig_P6,dig_P7,dig_P8,dig_P9,dig_H2,dig_H4,dig_H5;
@@ -907,81 +910,6 @@ void BME280_getRawData(){
   return;
 }
 
-//float型のデータを1Byteずつ送信
-void SerialOutputFloat(float data){
-  for(int i=0;i<4;i++){
-    Serial.write(((uint8_t*)&data)[i]);
-  }
-  return;
-}
-
-void SerialOutputUlong(unsigned long data){
-  for(int i=0;i<4;i++){
-    Serial.write(((uint8_t*)&data)[i]);
-  }
-  return;
-}
-
-//センサ値のシリアル出力
-void SerialOutput(){
-  //起動後時間，角速度，磁気，加速度，線形加速度，四元数，(温度，湿度，気圧，左モータ回転，右モータ回転)
-  // Serial.print(millis());
-  SerialOutputUlong(millis());
-  // Serial.print(",");
-
-  SerialOutputFloat(sensorsDataBuffer[GYRO_X]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[GYRO_Y]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[GYRO_Z]);
-  // Serial.print(",");
-  
-  SerialOutputFloat(sensorsDataBuffer[MAG_X]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[MAG_Y]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[MAG_Z]);
-  // Serial.print(",");
-  
-  SerialOutputFloat(sensorsDataBuffer[ACC_X]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[ACC_Y]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[ACC_Z]);
-  // Serial.print(",");
-  
-  SerialOutputFloat(sensorsDataBuffer[LACC_X]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[LACC_Y]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[LACC_Z]);
-  // Serial.print(",");
-  
-  SerialOutputFloat(sensorsDataBuffer[QW]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[QX]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[QY]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[QZ]);
-  // Serial.print(",");
-  
-  SerialOutputFloat(sensorsDataBuffer[TEMP]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[HUMID]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[PRESS]);
-  // Serial.print(",");
-
-  SerialOutputFloat(sensorsDataBuffer[L_WHEEL]);
-  // Serial.print(",");
-  SerialOutputFloat(sensorsDataBuffer[R_WHEEL]);
-
-  Serial.println();
-
-  return;
-}
-
 void MotorDriver_Init(){
   I2CConnectChk(ADDRESS_WHEELS,WHEELS);
   if(!I2CConnectFlgChk(WHEELS)){
@@ -1046,8 +974,8 @@ void readEncoders(){
 }
 
 void setup() {
-  // Serial.begin(230400);
-  Serial.begin(115200);
+  Serial.begin(230400);
+  // Serial.begin(115200);
   Wire.begin();
   Wire.setClock(100000L);
   delay(10);
@@ -1198,20 +1126,159 @@ void loop() {
   // Serial.println();
 }
 
+//=======================================================================
 
-//SerialOutput();について
-//115200bps / 10bit/char / 1000ms(1sec) *9ms =103.68char/s -> 10msサイクルだと足りてない
-//伝送レート2倍にした
+//float型のデータを1Byteずつ送信
+void wire1OutputFloat(float data){
+  for(int i=0;i<4;i++){
+    Wire1.write(((uint8_t*)&data)[i]);
+  }
+  return;
+}
+
+void wire1OutputUlong(unsigned long data){
+  for(int i=0;i<4;i++){
+    Wire1.write(((uint8_t*)&data)[i]);
+  }
+  return;
+}
+
+//I2C_slave動作のリクエスト対応用
+//グローバルのxxxを呼び出された時刻のメモとして使用
+//判定はCore0側で行う
+void onRequest() {
+  lastCalledClk=millis();
+//起動後時間，角速度，磁気，加速度，線形加速度，四元数，(温度，湿度，気圧，左モータ回転，右モータ回転)
+  wire1OutputUlong(lastCalledClk);
+
+  wire1OutputFloat(sensorsDataBuffer[GYRO_X]);
+  wire1OutputFloat(sensorsDataBuffer[GYRO_Y]);
+  wire1OutputFloat(sensorsDataBuffer[GYRO_Z]);
+  
+  wire1OutputFloat(sensorsDataBuffer[MAG_X]);
+  wire1OutputFloat(sensorsDataBuffer[MAG_Y]);
+  wire1OutputFloat(sensorsDataBuffer[MAG_Z]);
+  
+  wire1OutputFloat(sensorsDataBuffer[ACC_X]);
+  wire1OutputFloat(sensorsDataBuffer[ACC_Y]);
+  wire1OutputFloat(sensorsDataBuffer[ACC_Z]);
+  
+  wire1OutputFloat(sensorsDataBuffer[LACC_X]);
+  wire1OutputFloat(sensorsDataBuffer[LACC_Y]);
+  wire1OutputFloat(sensorsDataBuffer[LACC_Z]);
+  
+  wire1OutputFloat(sensorsDataBuffer[QW]);
+  wire1OutputFloat(sensorsDataBuffer[QX]);
+  wire1OutputFloat(sensorsDataBuffer[QY]);
+  wire1OutputFloat(sensorsDataBuffer[QZ]);
+  
+  wire1OutputFloat(sensorsDataBuffer[TEMP]);
+  wire1OutputFloat(sensorsDataBuffer[HUMID]);
+  wire1OutputFloat(sensorsDataBuffer[PRESS]);
+
+  wire1OutputFloat(sensorsDataBuffer[L_WHEEL]);
+  wire1OutputFloat(sensorsDataBuffer[R_WHEEL]);
+
+}
+
+//float型のデータを1Byteずつ送信
+void SerialOutputFloat(float data){
+  for(int i=0;i<4;i++){
+    Serial.write(((uint8_t*)&data)[i]);
+  }
+  return;
+}
+
+void SerialOutputUlong(unsigned long data){
+  for(int i=0;i<4;i++){
+    Serial.write(((uint8_t*)&data)[i]);
+  }
+  return;
+}
+
+//センサ値のシリアル出力
+void SerialOutput(){
+  //起動後時間，角速度，磁気，加速度，線形加速度，四元数，(温度，湿度，気圧，左モータ回転，右モータ回転)
+  Serial.print(millis());
+  Serial.print(",");
+
+  Serial.print(sensorsDataBuffer[GYRO_X]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[GYRO_Y]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[GYRO_Z]);
+  Serial.print(",");
+  
+  Serial.print(sensorsDataBuffer[MAG_X]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[MAG_Y]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[MAG_Z]);
+  Serial.print(",");
+  
+  Serial.print(sensorsDataBuffer[ACC_X]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[ACC_Y]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[ACC_Z]);
+  Serial.print(",");
+  
+  Serial.print(sensorsDataBuffer[LACC_X]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[LACC_Y]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[LACC_Z]);
+  Serial.print(",");
+  
+  Serial.print(sensorsDataBuffer[QW]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[QX]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[QY]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[QZ]);
+  Serial.print(",");
+  
+  Serial.print(sensorsDataBuffer[TEMP]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[HUMID]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[PRESS]);
+  Serial.print(",");
+
+  Serial.print(sensorsDataBuffer[L_WHEEL]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[R_WHEEL]);
+
+  Serial.println();
+
+  return;
+}
+
+//I2C(センサ生値)とシリアル(適当に成形)を適宜切り替える
+//それぞれ100k，230400bps
+//基本シリアルで出しておいて，リクエストがあったら以降I2Cに変更
+//10秒リクエストが無かったらシリアルに戻す
 void Core0(void *args) {
-  // Serial.begin(115200);
+  //シリアル230400はsetupに書いた
+
   unsigned long millis_buf_c0;
   int est_clk_c0;
+
+  Wire1.setPins(18,19);
+  // Wire1.onReceive(onReceive);
+  Wire1.onRequest(onRequest);
+  Wire1.begin((uint8_t)I2C_DEV_ADDR);
+
   while (1) {
     millis_buf_c0 = millis();
-    //センサデータのシリアル出力
-    SerialOutput();
 
-    // delay(1);
+    //10秒以上I2Cが呼ばれなければシリアル出力開始
+    if(millis_buf_c0-lastCalledClk>=10*1000){
+      //センサデータのシリアル出力
+      SerialOutput();
+    }
+    
     est_clk_c0=millis()-millis_buf_c0;
     if((est_clk_c0)<=delay_th){
       delay(delay_th-est_clk_c0);
