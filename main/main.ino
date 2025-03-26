@@ -4,23 +4,26 @@
 
 //TODO:センサ番号からセンサのI2Caddrを取得できるようにしておいたほうがいい
 
+//Wire1のslave動作用のアドレス指定
 #define I2C_DEV_ADDR 0x55
 
+//各ループは10ms動作を維持したい
 #define MAINLOOP_CYCLE_MS 10
 
-#define SSD1306_PAGES_SIZE 8//0~7の8ページ(64pix/8pix)
-#define SSD1306_CHARS_SIZE 16//1ページには16文字(128pix/8pix)
+#define SSD1306_PAGES_SIZE 8//0~7の8ページ(64pix/8pix)，縦方向
+#define SSD1306_CHARS_SIZE 16//1ページには16文字(128pix/8pix)，横方向
 #define SSD1306_CHARLINEDATA_SIZE 8//1文字は8line*1Byte
 
-#define FONTDATA_SIZE 59
-#define FONTDATA_OFFSET 0x20
+#define FONTDATA_SIZE 59//フォントは今現在全部で59文字分
+#define FONTDATA_OFFSET 0x20//ASCII相当で0x20からフォント作ってある
 
-#define SENSORS 23
-#define SENSORS_DISPLAY_OFFSET 12
+#define SENSORS 23//センサの値格納スペースは23件確保してある
+#define SENSORS_DISPLAY_OFFSET 12//センサのうち，モニタに出すのは12番から
 
 TaskHandle_t thp[1];//マルチスレッドのタスクハンドル格納用
 const uint8_t delay_th=MAINLOOP_CYCLE_MS-2;
 
+//I2Cアドレスのconst
 const uint8_t ADDRESS_SSD1306  =  0x3C;
 const uint8_t ADDRESS_BNO055   =  0x28;
 const uint8_t ADDRESS_BME280   =  0x76;
@@ -29,13 +32,17 @@ const uint8_t ADDRESS_BlinkM   =  0x09;
 const uint8_t ADDRESS_PCA9685  =  0x40;
 const uint8_t ADDRESS_ADC1115  =  0x00;//配線中
 
+//IMU BNO055の値取得用レジスタアドレス
 const uint8_t REG_BNO055_ACC   =  0x08;
 const uint8_t REG_BNO055_MAG   =  0x0E;
 const uint8_t REG_BNO055_GYRO  =  0x14;
 const uint8_t REG_BNO055_QUA   =  0x20;
 const uint8_t REG_BNO055_LIA   =  0x28;
+
+//ADC ADS1115のレジスタアドレス
 const uint8_t ADDRESS_ADS1115  =  0x28;
 
+//モタドラ関連のレジスタアドレス
 const uint8_t ADC_BAT_ADDR                    = 0x00;
 const uint8_t MOTOR_TYPE_ADDR                 = 0x14;
 const uint8_t MOTOR_ENCODER_POLARITY_ADDR     = 0x15;
@@ -51,9 +58,11 @@ const uint8_t MOTOR_TYPE_JGB37_520_12V_110RPM = 0x03;
 //センサデータ置き場
 double sensorsDataBuffer[SENSORS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int32_t EncodeTotal[4]={0,0,0,0};
+
+//起動時のセンサ死活監視flag
 uint16_t I2CActiveFlags=0b0000000000000000;
 
-//Core0用
+//Core0用グローバル変数
 unsigned long lastCalledClk=millis();
 
 //BME280用
@@ -63,16 +72,16 @@ int16_t dig_T2,dig_T3,dig_P2,dig_P3,dig_P4,dig_P5,dig_P6,dig_P7,dig_P8,dig_P9,di
 int8_t  dig_H1,dig_H3,dig_H6;
 
 enum SensorsBufferNUM{
-  GYRO_X, //0
-  GYRO_Y, //1
-  GYRO_Z, //2
-  MAG_X,  //3
-  MAG_Y,  //4
-  MAG_Z,  //5
-  ACC_X,  //6
-  ACC_Y,  //7
-  ACC_Z,  //8
-  LACC_X, //9
+  GYRO_X, //00
+  GYRO_Y, //01
+  GYRO_Z, //02
+  MAG_X,  //03
+  MAG_Y,  //04
+  MAG_Z,  //05
+  ACC_X,  //06
+  ACC_Y,  //07
+  ACC_Z,  //08
+  LACC_X, //09
   LACC_Y, //10
   LACC_Z, //11
   QW,     //12
@@ -181,6 +190,17 @@ void I2CConnectChk(int sensorAddr,int sensorNum){
   if(error==0){
     I2CActiveFlags=I2CActiveFlags | (1<<sensorNum);
   }
+  Serial.println();
+  Serial.print("I2CConnectChk_error:");
+  Serial.print(error);
+  Serial.println();
+  Serial.print("sensorNum:");
+  Serial.print(sensorNum);
+  Serial.println();
+  Serial.print("I2CActiveFlags:");
+  Serial.print(I2CActiveFlags,BIN);
+  Serial.println();
+  
   return;
 }
 
@@ -720,7 +740,7 @@ void BNO055_Calibration(){
 
 //温度センサ BME280 初期化
 void BME280_Init(){
-  delay(500);
+  delay(1000);
   I2CConnectChk(ADDRESS_BME280,HUM_BME280);
   if(!I2CConnectFlgChk(HUM_BME280)){
     return;
@@ -954,7 +974,7 @@ void WriteMotors(int8_t l_wheelPower,int8_t r_wheelPower){
 }
 
 void readEncoders(){
-  uint32_t buffer[2];
+  int32_t buffer[2];
 
   if(!I2CConnectFlgChk(WHEELS)){
     return;
@@ -973,17 +993,10 @@ void readEncoders(){
   return;
 }
 
-void setup() {
-  Serial.begin(230400);
-  // Serial.begin(115200);
-  Wire.begin();
-  Wire.setClock(100000L);
-  delay(10);
-  byte error;
-
-  //BlinkMの光を弱くしておく
+void BlinkM_Init(){
   I2CConnectChk(ADDRESS_BlinkM,LED_BlinkM);
   if(I2CConnectFlgChk(LED_BlinkM)){
+    //BlinkMの光を弱くしておく
     Wire.beginTransmission(ADDRESS_BlinkM);
     Wire.write(0x6f);
     Wire.write(0x6e);
@@ -992,6 +1005,42 @@ void setup() {
     Wire.write(0x04);
     Wire.endTransmission();
   }
+  return;
+}
+
+void BlinkM_setColor(uint8_t R,uint8_t G,uint8_t B){
+  if(I2CConnectFlgChk(LED_BlinkM)){
+    return;
+  }
+
+  Wire.beginTransmission(ADDRESS_BlinkM);
+  Wire.write(0x6e);
+  Wire.write(R);
+  Wire.write(G);
+  Wire.write(B);
+  Wire.endTransmission();
+  return;
+}
+
+void setup() {
+  Serial.begin(230400);
+  // Serial.begin(115200);
+  Wire.begin();
+  Wire.setClock(100000L);
+  delay(10);
+  byte error;
+
+
+  // I2CConnectChk(ADDRESS_BlinkM,LED_BlinkM);
+  // if(I2CConnectFlgChk(LED_BlinkM)){
+  //   Wire.beginTransmission(ADDRESS_BlinkM);
+  //   Wire.write(0x6f);
+  //   Wire.write(0x6e);
+  //   Wire.write(0x04);
+  //   Wire.write(0x04);
+  //   Wire.write(0x04);
+  //   Wire.endTransmission();
+  // }
   
   SSD1306_Init(); //OLED ssd1306 初期化
   
@@ -1008,23 +1057,40 @@ void setup() {
   delay(100);
   SSD1306_display1LineWithShiftUp("SSD1306 STANDBY");
   delay(300);
-  SSD1306_display1LineWithShiftUp("BLINKM SETUP");//BlinkM初期化演出
-  delay(100);
-  SSD1306_display1LineWithShiftUp("BLINKM STANDBY");
+
+  SSD1306_display1LineWithShiftUp("BLINKM SETUP");//BlinkM初期化
+  BlinkM_Init();
+  if(I2CConnectFlgChk(LED_BlinkM)){
+    SSD1306_display1LineWithShiftUp("BLINKM STANDBY");
+  }else{
+    SSD1306_display1LineWithShiftUp("BLINKM FAIL");
+  }
 
   SSD1306_display1LineWithShiftUp("BME280 SETUP");//温度計 BME280初期化
   BME280_Init();
-  SSD1306_display1LineWithShiftUp("BME280 STANDBY");
+  if(I2CConnectFlgChk(HUM_BME280)){
+    SSD1306_display1LineWithShiftUp("BME280 STANDBY");
+  }else{
+    SSD1306_display1LineWithShiftUp("BME280 FAIL");
+  }
 
   SSD1306_display1LineWithShiftUp("MOTOR SETUP");//モータドライバ初期化
   MotorDriver_Init();
-  SSD1306_display1LineWithShiftUp("MOTOR STANDBY");
+  if(I2CConnectFlgChk(WHEELS)){
+    SSD1306_display1LineWithShiftUp("MOTOR STANDBY");
+  }else{
+    SSD1306_display1LineWithShiftUp("MOTOR FAIL");
+  }
   delay(300);
 
   SSD1306_display1LineWithShiftUp("BNO055 SETUP");//IMU BNO055初期化
   BNO055_Init();
-  // BNO055_Calibration();
-  SSD1306_display1LineWithShiftUp("BNO055 STANDBY");
+  if(I2CConnectFlgChk(IMU_BNO055)){
+    // BNO055_Calibration();
+    SSD1306_display1LineWithShiftUp("BNO055 STANDBY");
+  }else{
+    SSD1306_display1LineWithShiftUp("BNO055 FAIL");
+  }
 
   SSD1306_display1LineWithShiftUp("SETUP COMPLETE");
   delay(1000);
@@ -1073,23 +1139,23 @@ void loop() {
       angular_z = angularZStr.toFloat();
 
       int8_t l_wheelPower,r_wheelPower;
-      int8_t test_maxPow=-1*20;
+      int8_t test_maxPow=1*20;
 
       if(linear_x==0){
         if(angular_z==0){
           l_wheelPower=0;
           r_wheelPower=0;
         }else{
-          l_wheelPower=test_maxPow*angular_z*-1;
-          r_wheelPower=test_maxPow*angular_z;
+          l_wheelPower=test_maxPow*angular_z;
+          r_wheelPower=test_maxPow*angular_z*-1;
         }
       }else{
         if(angular_z==0){
           l_wheelPower=test_maxPow;
           r_wheelPower=test_maxPow;
         }else{
-          l_wheelPower=test_maxPow+test_maxPow*angular_z*0.8*-1;
-          r_wheelPower=test_maxPow+test_maxPow*angular_z*0.8;
+          l_wheelPower=test_maxPow+test_maxPow*angular_z*0.8;
+          r_wheelPower=test_maxPow+test_maxPow*angular_z*0.8*-1;
         }
       }
 
@@ -1266,15 +1332,18 @@ void Core0(void *args) {
   int est_clk_c0;
 
   Wire1.setPins(18,19);
+  
+  //I2C通信自体は呼ばれたときだけ実施
   // Wire1.onReceive(onReceive);
   Wire1.onRequest(onRequest);
+  
   Wire1.begin((uint8_t)I2C_DEV_ADDR);
 
   while (1) {
     millis_buf_c0 = millis();
 
-    //10秒以上I2Cが呼ばれなければシリアル出力開始
-    if(millis_buf_c0-lastCalledClk>=10*1000){
+    //3秒以上I2Cが呼ばれなければシリアル出力開始
+    if(millis_buf_c0-lastCalledClk>=3*1000){
       //センサデータのシリアル出力
       SerialOutput();
     }
