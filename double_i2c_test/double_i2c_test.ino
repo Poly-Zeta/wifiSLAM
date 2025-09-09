@@ -312,7 +312,6 @@ void SSD1306_ClearAll(){
 
 void setup(){
   Serial.begin(115200);
-//   Wire1.begin();
   Wire1.begin(Wire1_SDA, Wire1_SCL);
 
 

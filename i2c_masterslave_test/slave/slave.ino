@@ -327,43 +327,43 @@ void onReceive(int len) {
 }
 
 void setup() {
-    Serial.begin(115200);
-    Serial.setDebugOutput(true);
-    Wire.begin();
+  Serial.begin(115200);
+  Serial.setDebugOutput(true);
+  Wire.begin();
 
-    Wire.setClock(100000L);
-    delay(10);
-    byte error;
-    
-    SSD1306_Init(); //OLED ssd1306 初期化
-    
+  Wire.setClock(100000L);
+  delay(10);
+  byte error;
+  
+  SSD1306_Init(); //OLED ssd1306 初期化
+  
 
-    xTaskCreatePinnedToCore(Core0, "Core0", 8192, NULL, 3, &thp[0], 0); 
+  xTaskCreatePinnedToCore(Core0, "Core0", 8192, NULL, 3, &thp[0], 0); 
 }
 
 void loop() {
-    SSD1306_ClearAll();
-    delay(3000);
-    SSD1306_FullFillSample();
-    delay(3000);
+  SSD1306_ClearAll();
+  delay(3000);
+  SSD1306_FullFillSample();
+  delay(3000);
 }
 
 void Core0(void *args) {
-    unsigned long millis_buf_c0;
-    int est_clk_c0;
+  unsigned long millis_buf_c0;
+  int est_clk_c0;
 
-    Wire1.setPins(18,19);
-    Wire1.onReceive(onReceive);
-    Wire1.onRequest(onRequest);
-    Wire1.begin((uint8_t)I2C_DEV_ADDR);
+  Wire1.setPins(18,19);
+  Wire1.onReceive(onReceive);
+  Wire1.onRequest(onRequest);
+  Wire1.begin((uint8_t)I2C_DEV_ADDR);
 
-    while (1) {
-        millis_buf_c0 = millis();
+  while (1) {
+    millis_buf_c0 = millis();
 
-        est_clk_c0=millis()-millis_buf_c0;
-        if((est_clk_c0)<=delay_th){
-            delay(delay_th-est_clk_c0);
-        }
-        while ((millis() - millis_buf_c0) < MAINLOOP_CYCLE_MS){}
+    est_clk_c0=millis()-millis_buf_c0;
+    if((est_clk_c0)<=delay_th){
+      delay(delay_th-est_clk_c0);
     }
+    while ((millis() - millis_buf_c0) < MAINLOOP_CYCLE_MS){}
+  }
 }

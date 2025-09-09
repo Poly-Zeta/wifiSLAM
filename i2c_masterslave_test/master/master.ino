@@ -58,6 +58,7 @@ void loop() {
     delay(delay_th-est_clk_c1);
   }
   while ((millis() - millis_buf) < MAINLOOP_CYCLE_MS){}
+  // delay(30000);
 }
 
 void Core0(void *args) {

@@ -1139,25 +1139,18 @@ void loop() {
       angular_z = angularZStr.toFloat();
 
       int8_t l_wheelPower,r_wheelPower;
-      int8_t test_maxPow=1*20;
+      float velocity_left,velocity_right;
 
-      if(linear_x==0){
-        if(angular_z==0){
-          l_wheelPower=0;
-          r_wheelPower=0;
-        }else{
-          l_wheelPower=test_maxPow*angular_z;
-          r_wheelPower=test_maxPow*angular_z*-1;
-        }
-      }else{
-        if(angular_z==0){
-          l_wheelPower=test_maxPow;
-          r_wheelPower=test_maxPow;
-        }else{
-          l_wheelPower=test_maxPow+test_maxPow*angular_z*0.8;
-          r_wheelPower=test_maxPow+test_maxPow*angular_z*0.8*-1;
-        }
-      }
+      float test_maxPow=1*40;
+      float test_defaultPow=1*30;
+
+      float wheelSeparation=12;//cm
+
+      velocity_left =test_defaultPow*linear_x + (angular_z*wheelSeparation/2);
+      velocity_right=test_defaultPow*linear_x - (angular_z*wheelSeparation/2);
+
+      l_wheelPower=constrain(velocity_left,-test_maxPow,test_maxPow);
+      r_wheelPower=constrain(velocity_right,-test_maxPow,test_maxPow);
 
       WriteMotors(l_wheelPower,r_wheelPower);
       
