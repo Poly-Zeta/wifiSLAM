@@ -91,8 +91,8 @@ enum SensorsBufferNUM{
   HUMID,  //16
   TEMP,   //17
   PRESS,  //18
-  L_WHEEL,//19
-  R_WHEEL,//20
+  R_WHEEL,//19
+  L_WHEEL,//20
   A_IN0,  //21
   A_IN1   //22
 };
@@ -229,8 +229,8 @@ void SSD1306_displaySensorsData(){
     {2, 2, 5,1},//HUMID
     {2,10, 5,1},//TEMP
     {3, 6, 7,2},//PRESS
-    {4, 8, 5,0},//L_WHEEL
-    {5, 8, 5,0},//R_WHEEL
+    {4, 8, 5,0},//R_WHEEL
+    {5, 8, 5,0},//L_WHEEL
     {6, 3,10,2},//A_IN0
     {7, 3,10,2} //A_IN1
   };
@@ -634,6 +634,11 @@ void BNO055_Init(){
 
     //電源モードノーマル
     BNO055_Write(0x3e, 0x00,   80);   //pwr_mode = normal mode
+    
+    //軸の向き設定を変更
+    BNO055_Write(0x41, 0x21,   80);
+    //軸の正負設定を変更
+    BNO055_Write(0x42, 0x04,   80);
 
     //外部発振器の使用らしい．要らんのでは
     // BNO055_Write(0x3f, 0x80, 1000);   //sys trigger = clk_sel ex_osc
@@ -987,8 +992,8 @@ void readEncoders(){
     Wire.readBytes((uint8_t*)buffer, 8);
   Wire.endTransmission();
 
-  sensorsDataBuffer[L_WHEEL]=(double)buffer[0];
-  sensorsDataBuffer[R_WHEEL]=(double)buffer[1];
+  sensorsDataBuffer[R_WHEEL]=(double)buffer[0];
+  sensorsDataBuffer[L_WHEEL]=(double)buffer[1];
 
   return;
 }
@@ -1101,8 +1106,8 @@ void setup() {
   SSD1306_display1LineWithShiftUp("QY 0.00 QZ 0.00");
   SSD1306_display1LineWithShiftUp("HU100.0 TE 00.0");
   SSD1306_display1LineWithShiftUp("PRESS 1000.00");
-  SSD1306_display1LineWithShiftUp("L-WHEEL 00000");
   SSD1306_display1LineWithShiftUp("R-WHEEL 00000");
+  SSD1306_display1LineWithShiftUp("L-WHEEL 00000");
   SSD1306_display1LineWithShiftUp("A-0 0000000000");
   SSD1306_display1LineWithShiftUp("A-1 0000000000");
 
@@ -1235,8 +1240,8 @@ void onRequest() {
   wire1OutputFloat(sensorsDataBuffer[HUMID]);
   wire1OutputFloat(sensorsDataBuffer[PRESS]);
 
-  wire1OutputFloat(sensorsDataBuffer[L_WHEEL]);
   wire1OutputFloat(sensorsDataBuffer[R_WHEEL]);
+  wire1OutputFloat(sensorsDataBuffer[L_WHEEL]);
 
 }
 
@@ -1305,9 +1310,9 @@ void SerialOutput(){
   Serial.print(sensorsDataBuffer[PRESS]);
   Serial.print(",");
 
-  Serial.print(sensorsDataBuffer[L_WHEEL]);
-  Serial.print(",");
   Serial.print(sensorsDataBuffer[R_WHEEL]);
+  Serial.print(",");
+  Serial.print(sensorsDataBuffer[L_WHEEL]);
 
   Serial.println();
 
