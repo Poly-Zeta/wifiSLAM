@@ -20,6 +20,8 @@
 #define SENSORS 23//センサの値格納スペースは23件確保してある
 #define SENSORS_DISPLAY_OFFSET 12//センサのうち，モニタに出すのは12番から
 
+#define CMDVEL_TIMER_MS 1000 //1000ms cmd_velが来なかったら止める 低速で小型の機体なのでまあこのくらいで
+
 TaskHandle_t thp[1];//マルチスレッドのタスクハンドル格納用
 const uint8_t delay_th=MAINLOOP_CYCLE_MS-2;
 
@@ -1115,6 +1117,7 @@ void setup() {
 }
 
 void loop() {
+  static int cmdvel_timer=0;//cmdvelをシリアルで受け取れた時0にする 受け取れなかったとき加算していく
   unsigned long millis_buf = millis();//1ループの開始時間はとっておく
   
   //IMUの値更新
@@ -1128,6 +1131,8 @@ void loop() {
 
   //ホイールエンコーダの読み出し
   readEncoders();
+
+  cmdvel_timer+=MAINLOOP_CYCLE_MS;
 
   if (Serial.available() > 0) {
     String receivedData = Serial.readStringUntil('\n'); // 改行までのデータを読み込む
@@ -1166,7 +1171,17 @@ void loop() {
       // sensorsDataBuffer[A_IN1]=angular_z;
       sensorsDataBuffer[A_IN0]=l_wheelPower;
       sensorsDataBuffer[A_IN1]=r_wheelPower;
+
+      cmdvel_timer=0;
     }
+  }
+
+  //有効なcmd_velを一定時間受け取れなかったとき，駆動モータ出力を0にする
+  if(cmdvel_timer>=CMDVEL_TIMER_MS){
+    WriteMotors(0,0);
+    sensorsDataBuffer[A_IN0]=0;
+    sensorsDataBuffer[A_IN1]=0;
+    cmdvel_timer=0;
   }
 
   //センサデータのディスプレイ表示
